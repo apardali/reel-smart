@@ -549,3 +549,28 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
  #setup #catPick .pill,#setup #catPick .pill[data-v=hard]{min-height:calc(var(--u)*7)}
  .setB .setBq{margin-top:auto;padding-top:calc(var(--u)*2)}
 }
+
+/* ===== TV title: the original artwork, Reel and SMART on one line (img/logo-tv.jpg) ===== */
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .marquee{height:calc(var(--u)*30)}
+ .marquee::before{display:none}
+ .marquee .logo,.marquee p{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;border:0!important;padding:0!important;margin:0!important}
+ .lg-art{display:block!important;position:absolute;left:50%;top:0;height:100%;width:auto;transform:translateX(-50%);
+  -webkit-mask-image:radial-gradient(ellipse 52% 56% at 50% 48%,#000 74%,transparent 100%);mask-image:radial-gradient(ellipse 52% 56% at 50% 48%,#000 74%,transparent 100%)}
+ body.ingame .marquee{height:calc(var(--u)*17)}
+ .setgrid{min-height:calc(var(--u)*48)}
+}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .marquee{height:calc(var(--u)*37)}
+ .lg-art{-webkit-mask-image:radial-gradient(ellipse 58% 62% at 50% 47%,#000 78%,transparent 100%);mask-image:radial-gradient(ellipse 58% 62% at 50% 47%,#000 78%,transparent 100%)}
+ .setgrid{min-height:calc(var(--u)*44)}
+ .setA,.setB{padding:calc(var(--u)*2.4) calc(var(--u)*3)}
+ .setA{gap:calc(var(--u)*1.8)}
+ #setup .setA .joinbar{padding:calc(var(--u)*1.8) calc(var(--u)*2.4) calc(var(--u)*1.5)}
+ #setup .mode{padding:calc(var(--u)*1.7) calc(var(--u)*2.6)}
+ #setup #catPick{gap:calc(var(--u)*1.6) calc(var(--u)*2)}
+ #setup #catPick .pill,#setup #catPick .pill[data-v=hard]{min-height:calc(var(--u)*6.2)}
+ .setfoot{margin-top:calc(var(--u)*1.8)}
+ #setup .setfoot .start{min-height:calc(var(--u)*7.4)}
+ body.ingame .marquee{height:calc(var(--u)*19)}
+}
