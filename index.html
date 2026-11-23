@@ -19,8 +19,10 @@
   <p>Movie &amp; TV trivia night</p></header>
 
  <section class="stage" id="setup">
-  <div class="joinbar"><strong>Playing on your phone?</strong><button id="toJoin">Join a game</button><div class="jsub">Enter the room code shown on the TV<br>to join the game from your phone.</div></div>
+  <div class="joinbar"><strong>Playing on your phone?</strong><button id="toJoin">Join a game</button><div class="jsub">Enter the room code shown on the TV <br>to join the game from your phone.</div></div>
   <h2>Set up a game</h2>
+  <div class="setgrid">
+   <div class="setA">
   <div class="modes" id="modePick">
    <button type="button" class="mode" data-v="host" aria-pressed="true">TV + phones<small>This screen is the TV. Everyone answers on their phone.</small></button>
    <button type="button" class="mode" data-v="local" aria-pressed="false">One screen<small>Take turns on this device. No phones needed.</small></button>
@@ -33,6 +35,8 @@
    </form>
    <div class="chips" id="chips"></div>
   </div>
+   </div>
+   <div class="setB">
   <label>Category</label>
   <div class="row" id="catPick">
    <button type="button" class="pill" data-v="all" aria-pressed="false">Everything</button>
@@ -47,6 +51,8 @@
    <button type="button" class="pill" data-v="10" aria-pressed="true">10</button>
    <button type="button" class="pill" data-v="20" aria-pressed="false">20</button>
    <button type="button" class="pill" data-v="30" aria-pressed="false">30</button>
+  </div>
+   </div>
   </div>
   <button class="start" id="startBtn">Open the lobby</button>
   <p class="status warn hide" id="setupWarn"></p>
