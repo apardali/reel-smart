@@ -151,3 +151,99 @@ input[type=email],input[type=password]{font:16px "DM Sans",sans-serif;padding:11
  .timer{height:14px}
 }
 @media(prefers-reduced-motion:reduce){.bulbs i{animation:none;opacity:.9}.timer div{transition:none}.beams polygon{animation:none}}
+
+/* ================= THEME: Hollywood premiere (navy + gold) ================= */
+:root{--bg:#060c26;--bg2:#050a1e;--card:rgba(8,16,48,.9);--cink:#fff;--muted:#aebbe0;--line:rgba(240,190,80,.28);
+ --gold:#f6c445;--gold2:#a87411;--goldline:#e3ad3c;--ok:#22b365;--bad:#d9434b}
+body{background:#050a1e;color:#fff}
+.bg{opacity:1}
+.beams polygon{animation-duration:12s}
+/* logo */
+.marquee{background:none;border:0;box-shadow:none;padding:6px 10px 4px;position:relative;overflow:visible}
+.bulbs{display:none}
+.logo{margin:0;display:inline-grid;grid-template-columns:auto auto;grid-template-areas:"reel star" "smart smart";justify-items:center;align-items:end;line-height:.9;position:relative;z-index:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.lg-reel{grid-area:reel;font:400 clamp(60px,15vw,118px)/.95 Lobster,"Brush Script MT",cursive;background:linear-gradient(180deg,#fff6c7 0%,#ffd45a 38%,#e39a1e 62%,#ffcf4d 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px #7a4708;padding:0 .08em;transform:rotate(-6deg)}
+.lg-star{grid-area:star;font-size:clamp(28px,6vw,48px);color:#ffd45a;align-self:start;margin-left:-.35em;text-shadow:0 0 14px rgba(255,212,90,.9)}
+.lg-smart{grid-area:smart;font:400 clamp(52px,13vw,104px)/.9 "Russo One","Arial Black",sans-serif;letter-spacing:.02em;font-style:italic;transform:skewX(-8deg);margin-top:-.08em;background:linear-gradient(180deg,#ffffff 0%,#e9edf6 40%,#9aa6bd 55%,#f4f6fb 75%,#b9c2d4 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px #14214d;padding:0 .1em .06em;border-bottom:6px solid transparent;border-image:linear-gradient(90deg,transparent,#f6c445 12%,#ffe08a 50%,#f6c445 88%,transparent) 1}
+.marquee p{margin:8px 0 0;color:#dfe7ff;font-weight:600;letter-spacing:.02em;position:relative;z-index:1}
+.lg-reelart{position:absolute;left:max(0px,calc(50% - 320px));top:20px;width:clamp(70px,16vw,130px);opacity:.95;filter:drop-shadow(0 6px 12px rgba(0,0,0,.6))}
+.lg-clap{position:absolute;left:50%;top:-6px;width:clamp(90px,20vw,150px);transform:translateX(-62%);opacity:.9;filter:drop-shadow(0 6px 12px rgba(0,0,0,.6))}
+@media(max-width:520px){.lg-reelart{left:-6px;top:30px}}
+body.ingame .lg-reelart,body.ingame .lg-clap,body.ingame .marquee p{display:none}
+body.ingame .lg-reel{font-size:clamp(40px,8vw,64px)}body.ingame .lg-smart{font-size:clamp(34px,7vw,56px)}body.ingame .lg-star{font-size:28px}
+/* panels */
+.stage{background:linear-gradient(180deg,rgba(12,24,66,.94),rgba(5,11,34,.94));border:2.5px solid var(--goldline);border-radius:28px;color:#fff;
+ box-shadow:0 0 0 1px rgba(255,220,130,.25) inset,0 0 26px rgba(246,196,69,.35),0 22px 50px rgba(0,0,0,.55)}
+.stage::before,.stage::after{display:none}
+h2{color:#fff}h3{color:#ffe08a}
+label{color:#e8eeff}
+.note,.status,.meta{color:var(--muted)}
+.status.warn{color:#ff9a9a}
+/* question number pill */
+#qnum{display:inline-block;color:#ffd45a;font-weight:800;font-size:clamp(15px,1.3vw,24px);padding:6px 18px;border:2px solid var(--goldline);border-radius:999px;background:linear-gradient(180deg,#121f4d,#070d2a);box-shadow:0 0 14px rgba(246,196,69,.35)}
+.turn{color:#ffd45a;font-family:Lobster,cursive}
+.cat{background:linear-gradient(180deg,#ffe08a,#e6a52a);color:#1a1205}
+.q{color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+/* buttons */
+button,.up{color:#1a1205;background:linear-gradient(180deg,#ffe58f 0%,#f6c445 45%,#d79a1f 100%);box-shadow:0 4px 0 #8a5a0c,0 0 16px rgba(246,196,69,.35);border-radius:999px}
+button:active{box-shadow:0 2px 0 #8a5a0c}
+.ghost,.pill,.mode{background:rgba(6,12,38,.6);color:#ffe08a;border:2px solid var(--goldline);box-shadow:none}
+.pill[aria-pressed=true],.mode[aria-pressed=true]{background:linear-gradient(180deg,#ffe58f,#e6a52a);color:#1a1205;border-color:#ffd45a}
+.mode{border-radius:18px}.mode small{color:var(--muted)}.mode[aria-pressed=true] small{color:#4a3209}
+button:focus-visible,input:focus-visible,.up:focus-within,a:focus-visible{outline:3px solid #9fd0ff;outline-offset:3px}
+a{color:#ffd45a}
+input[type=text],input[type=search],input[type=email],input[type=password],textarea{background:rgba(3,8,28,.7);color:#fff;border:2px solid var(--goldline);border-radius:14px}
+input::placeholder,textarea::placeholder{color:#8794bb}
+.joinbar{background:linear-gradient(180deg,rgba(28,48,120,.6),rgba(10,20,60,.6));border:2px solid var(--goldline);border-radius:20px;color:#fff}
+.chip{background:rgba(6,12,38,.85);border:2px solid var(--goldline);color:#fff}
+.chip button{background:rgba(255,255,255,.15);color:#fff;box-shadow:none}
+/* answers (TV + one screen) */
+.opt{background:linear-gradient(180deg,#132563 0%,#0a1440 55%,#070e30 100%);color:#fff;border:2.5px solid var(--goldline);border-radius:999px;box-shadow:0 0 12px rgba(246,196,69,.25),inset 0 1px 0 rgba(255,255,255,.15);font-weight:800;padding-left:10px}
+.opt b,.opt.tile b{background:radial-gradient(circle at 50% 35%,#1a2a66,#060c2a);color:#ffd45a;border:2.5px solid #ffd45a;box-shadow:0 0 10px rgba(255,212,90,.5);font-size:1.05em}
+.opt span{flex:1;text-align:left}
+.opt:hover:not(:disabled):not(.tile){border-color:#ffe08a;box-shadow:0 0 20px rgba(246,196,69,.55)}
+.opt.right{background:linear-gradient(180deg,#2bd27a,#13894a);border-color:#9dffc8;color:#fff}
+.opt.wrong{background:linear-gradient(180deg,#ec5a62,#a3232b);border-color:#ffb3b7;color:#fff}
+.opt.right b,.opt.wrong b{background:rgba(0,0,0,.25);color:#fff;border-color:#fff}
+.timer{background:rgba(255,255,255,.12);border:1px solid rgba(246,196,69,.35)}
+.timer div{background:linear-gradient(90deg,#ffe58f,#f6c445,#d79a1f)}
+.result{color:#fff}
+.screen{border:3px solid var(--goldline);border-radius:18px;box-shadow:0 0 22px rgba(246,196,69,.35)}
+/* scoreboard */
+.score{background:linear-gradient(180deg,rgba(18,34,90,.92),rgba(6,12,38,.92));color:#fff;border:2px solid var(--goldline);border-radius:999px;padding:8px 16px}
+.score.on{background:linear-gradient(180deg,#ffe58f,#e6a52a);color:#1a1205}
+.score .gain{color:#5ff0a4}
+/* lobby + end */
+.code{color:#ffd45a;text-shadow:0 0 22px rgba(255,212,90,.55);font-family:"Russo One",sans-serif;letter-spacing:.18em}
+.howto{color:#e8eeff}
+.podium li{border-bottom-color:rgba(246,196,69,.35);color:#fff}
+.podium li:first-child{color:#ffd45a}
+#winner{font-family:Lobster,cursive;color:#ffd45a;font-size:clamp(36px,5vw,64px)}
+/* phone controller */
+.pb,.pb.L0,.pb.L1,.pb.L2,.pb.L3{background:linear-gradient(180deg,#132563 0%,#0a1440 55%,#070e30 100%);color:#fff;border:2.5px solid var(--goldline);border-radius:999px;box-shadow:0 0 14px rgba(246,196,69,.3);min-height:78px;font-weight:800}
+.pb i{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;font:400 26px "Russo One",sans-serif;color:#ffd45a;border:2.5px solid #ffd45a;background:radial-gradient(circle at 50% 35%,#1a2a66,#060c2a);box-shadow:0 0 10px rgba(255,212,90,.5)}
+.pb.pick{outline:none;border-color:#fff;box-shadow:0 0 0 3px #ffd45a,0 0 24px rgba(255,212,90,.8)}
+.me{color:#fff}.pmsg{color:#fff}.big{color:#ffd45a;font-family:Lobster,cursive;font-size:48px}
+/* admin bits */
+.rcard{background:rgba(255,255,255,.05);border:2px solid var(--line);border-radius:18px}
+.secret{background:rgba(255,255,255,.08);color:#fff}
+.cl{border-bottom-color:var(--line)}.cl .s.has{color:#5ff0a4}
+.lockmsg{color:var(--muted)}
+/* TV sizing for the new look */
+@media (min-width:1200px) and (min-aspect-ratio:3/2){
+ .marquee{padding:0}
+ body.ingame .lg-reel{font-size:clamp(44px,3.4vw,72px)}body.ingame .lg-smart{font-size:clamp(38px,2.9vw,62px)}
+ .opt{min-height:clamp(64px,8vh,104px)}
+ .score{border-radius:18px}
+}
+.marquee h1.logo{text-shadow:none;color:inherit;font:inherit}
+.logo span{text-shadow:none}
+.lg-star{text-shadow:0 0 14px rgba(255,212,90,.9)}
+.lg-smart{-webkit-text-stroke:2.5px #0d1a45;filter:drop-shadow(0 3px 0 #0b1236)}
+.lg-reel{filter:drop-shadow(0 3px 0 #5a3205)}
+.lg-clap{top:-30px;transform:translateX(-70%) rotate(-6deg);z-index:0}
+@media(max-width:700px){.lg-clap{display:none}}
+h2{font:400 clamp(24px,4vw,34px)/1.15 "Russo One","Arial Black",sans-serif;letter-spacing:.01em}
+@media (min-width:1200px) and (min-aspect-ratio:3/2){
+ #setup,#lobby,#join,#phone{grid-column:1/-1;width:100%;max-width:1280px;justify-self:center}
+}
