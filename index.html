@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Russo+One&family=Playfair+Display:wght@800;900&family=DM+Sans:wght@400;600;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>.lg-words,.lg-art,.bg-wide{display:none}</style>
-<link rel="stylesheet" href="css/style.css?v=1795417885">
+<link rel="stylesheet" href="css/style.css?v=1795474686">
 </head>
 <body>
 <div class="bg photo" aria-hidden="true"><img class="bg-wide" src="img/background-tv.jpg?v=1795417697" alt=""><img class="bg-blur" src="img/background.jpg" alt=""><img class="bg-main" src="img/background.jpg" alt=""></div>
@@ -64,14 +64,14 @@
   <div class="tvnote"><p>Players join on their phones with the room code shown on the TV.<br>Everyone answers every question. Faster right answers score more.</p></div>
   <p class="status" id="clipCount" style="margin-top:12px">Loading clips…</p>
   <p class="note" id="modeNote"></p>
-  <div class="row" style="justify-content:flex-end;margin-top:12px"><a class="ghost exit btnlink" href="admin.html">Admin</a></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><label class="langwrap"><span class="sr">Language</span><select id="langPick" aria-label="Language"></select></label><a class="ghost exit btnlink" href="admin.html">Admin</a></div>
   </div>
  </section>
 
  <section class="stage hide" id="lobby">
   <div class="meta"><span>Lobby</span><button class="ghost exit" id="lobbyExit">Exit</button></div>
   <div class="codebox"><div class="note" style="margin:0 0 4px">Room code</div><div class="code" id="roomCode">----</div>
-   <p class="howto">On your phone, go to <b id="siteUrl"></b>, tap <b>Join a game</b> and enter this code.</p></div>
+   <p class="howto" id="howto"></p></div>
   <div class="lobbylist" id="lobbyList"></div>
   <p class="status" id="lobbyNote" style="text-align:center">Waiting for players…</p>
   <button class="start" id="hostGo" disabled>Start the game</button>
@@ -127,6 +127,6 @@
  <div class="board" id="board"></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
-<script type="module" src="js/game.js?v=1795472980"></script>
+<script type="module" src="js/game.js?v=1795474686"></script>
 </body>
 </html>

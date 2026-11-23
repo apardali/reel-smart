@@ -1,3 +1,4 @@
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795474686";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -16,7 +17,8 @@ const show = id => {
 };
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a };
 const vid = $("vid");
-$("siteUrl").textContent = location.host + location.pathname.replace(/index\.html$/, "");
+const SITE = location.host + location.pathname.replace(/index\.html$/, "");
+function renderHowto() { $("howto").innerHTML = esc(t("On your phone, go to {url}, tap {join} and enter this code.", { url: "\u0000", join: "\u0001" })).replace("\u0000", `<b>${esc(SITE)}</b>`).replace("\u0001", `<b>${esc(t("Join a game"))}</b>`) }
 
 /* ---------- clips + custom questions (files in the repo) ---------- */
 let clips = {}, CUSTOM = [], clipsReady = false;
@@ -24,7 +26,7 @@ const ck = q => q.clip || q.id;
 const hasClip = q => !!clips[ck(q)];
 function updateCount() {
   const n = Object.keys(clips).length;
-  $("clipCount").textContent = !clipsReady ? "Loading clips…" : n ? `${n} clip${n > 1 ? "s" : ""} ready` : "No clips yet. See Admin for how to add them.";
+  $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");
 }
 function rebuildQ() {
   Q.length = BASE;
@@ -83,12 +85,12 @@ const pick = (id, fn) => $(id).addEventListener("click", e => { const b = e.targ
 pick("catPick", v => cat = v); pick("lenPick", v => per = +v); pick("modePick", v => { mode = v; applyMode() });
 function applyMode() {
   $("localPlayers").classList.toggle("hide", mode !== "local");
-  $("lenLabel").textContent = mode === "local" ? "Questions per player" : "Questions";
-  $("startBtn").textContent = mode === "local" ? "Roll the film" : "Open the lobby";
+  $("lenLabel").textContent = mode === "local" ? t("Questions per player") : t("Questions");
+  $("startBtn").textContent = mode === "local" ? t("Roll the film") : t("Open the lobby");
   $("setupWarn").classList.add("hide");
   $("modeNote").textContent = mode === "host"
-    ? "TV + phones: put this page on the TV. Players open the same site on their phones and tap Join a game. Everyone answers every question; faster right answers score more."
-    : "One screen: players take turns on this device. 20 seconds per question, 100 points for a right answer plus up to 100 for speed. Keys 1–4 answer.";
+    ? t("TV + phones: put this page on the TV. Players open the same site on their phones and tap Join a game. Everyone answers every question; faster right answers score more.")
+    : t("One screen: players take turns on this device. 20 seconds per question, 100 points for a right answer plus up to 100 for speed. Keys 1–4 answer.");
   show("setup"); renderBoard(-1);
 }
 function buildDeck(n) {
@@ -108,18 +110,18 @@ let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = fals
 function paintQuestion(q, label, turnText, tiles) {
   T = BASE_T;
   $("qnum").textContent = label; $("pts").textContent = "";
-  $("turn").textContent = turnText; $("cat").textContent = q.c; $("qtext").textContent = q.q;
+  $("turn").textContent = turnText; $("cat").textContent = t(q.c); $("qtext").textContent = t(q.q);
   $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(o)}</span></button>`).join("");
   $("result").textContent = ""; $("nextBtn").classList.add("hide");
   const c = clips[ck(q)];
   if (c) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
     vid.src = c.u; vid.currentTime = 0; const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { });
-    $("qtext").textContent = "Watch the clip…";
+    $("qtext").textContent = t("Watch the clip…");
     // The question shows after 2 s; the answers pop up once most of the clip has played
     // (25 s in, or just before the end of a shorter clip). The clip keeps playing.
     clearTimeout(autoQ); const myQ = q;
-    autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering) $("qtext").textContent = myQ.q }, 2000);
+    autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering) $("qtext").textContent = t(myQ.q) }, 2000);
     clipQ = myQ;
     return true;
   }
@@ -128,7 +130,7 @@ function paintQuestion(q, label, turnText, tiles) {
 }
 function stopVideo() { vid.pause(); if (vid.getAttribute("src")) { vid.removeAttribute("src"); vid.load() } }
 function startTimer(onTick, onEnd) {
-  $("qtext").textContent = deck[idx].q; $("revealBtn").classList.add("hide"); $("answerArea").classList.remove("hide");
+  $("qtext").textContent = t(deck[idx].q); $("revealBtn").classList.add("hide"); $("answerArea").classList.remove("hide");
   left = T; $("bar").style.width = "100%"; clearInterval(timer);
   timer = setInterval(() => { left -= .1; $("bar").style.width = Math.max(0, left / T * 100) + "%"; onTick && onTick(); if (left <= 0) onEnd() }, 100);
 }
@@ -138,7 +140,7 @@ vid.addEventListener("timeupdate", () => {
   if (vid.currentTime >= at) beginAnswers();
 });
 vid.addEventListener("ended", () => { if (!$("play").classList.contains("hide")) beginAnswers() });
-vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = "That clip wouldn't play, so here's the question without it."; $("screen").classList.add("hide"); beginAnswers() } });
+vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = t("That clip wouldn't play, so here's the question without it."); $("screen").classList.add("hide"); beginAnswers() } });
 $("revealBtn").addEventListener("click", () => { vid.pause(); beginAnswers() });
 function beginAnswers() {
   if (answering) return; answering = true;
@@ -150,29 +152,29 @@ function beginAnswers() {
 function startLocal() {
   if (!players.length) { $("pname").focus(); return }
   deck = buildDeck(per * players.length);
-  if (!deck.length) { warn("No questions available for that category yet. Add clips in Admin or pick another category."); return }
+  if (!deck.length) { warn(t("No questions available for that category yet. Add clips in Admin or pick another category.")); return }
   players.forEach(p => p.s = 0); idx = 0; show("play"); ask();
 }
 function ask() {
   const q = deck[idx], p = idx % players.length; locked = false; answering = false; clearInterval(timer);
   renderBoard(p);
-  if (!paintQuestion(q, `Question ${idx + 1} of ${deck.length}`, `${players[p].n}, you're up`, false)) beginAnswers();
+  if (!paintQuestion(q, t("Question {i} of {n}", { i: idx + 1, n: deck.length }), t("{name}, you're up", { name: players[p].n }), false)) beginAnswers();
 }
 function answer(i) {
   if (mode !== "local" || locked || !answering) return; locked = true; clearInterval(timer);
   const q = deck[idx], p = players[idx % players.length];
   [...$("opts").children].forEach((b, k) => { b.disabled = true; if (k === q.a) b.classList.add("right"); else if (k === i) b.classList.add("wrong") });
-  if (i === q.a) { const pts = 100 + Math.round(Math.max(0, left) / T * 100); p.s += pts; $("result").textContent = `Correct! +${pts} points`; $("pts").textContent = `+${pts}` }
-  else $("result").textContent = (i < 0 ? "Time's up. " : "Not quite. ") + `It was ${q.o[q.a]}.`;
+  if (i === q.a) { const pts = 100 + Math.round(Math.max(0, left) / T * 100); p.s += pts; $("result").textContent = t("Correct! +{n} points", { n: pts }); $("pts").textContent = `+${pts}` }
+  else $("result").textContent = (i < 0 ? t("Time's up.") : t("Not quite.")) + " " + t("It was {a}.", { a: q.o[q.a] });
   renderBoard(idx % players.length);
-  const nb = $("nextBtn"); nb.textContent = idx + 1 < deck.length ? "Next question" : "See the results"; nb.classList.remove("hide"); nb.focus();
+  const nb = $("nextBtn"); nb.textContent = idx + 1 < deck.length ? t("Next question") : t("See the results"); nb.classList.remove("hide"); nb.focus();
 }
 function next() { stopVideo(); if (mode === "host") { hostNext(); return } idx++; if (idx < deck.length) ask(); else finish() }
 function finish() {
   stopVideo(); show("end"); const r = [...players].sort((a, b) => b.s - a.s);
   const tie = r.length > 1 && r[0].s === r[1].s;
-  $("winner").textContent = r.length === 1 ? `${r[0].n} scored ${r[0].s}` : tie ? "It's a tie at the top!" : `${r[0].n} takes the Oscar`;
-  $("podium").innerHTML = r.map((p, i) => `<li><span>${i + 1}. ${esc(p.n)}</span><span class="n">${p.s} pts</span></li>`).join("");
+  $("winner").textContent = r.length === 1 ? t("{name} scored {n}", { name: r[0].n, n: r[0].s }) : tie ? t("It's a tie at the top!") : t("{name} takes the Oscar", { name: r[0].n });
+  $("podium").innerHTML = r.map((p, i) => `<li><span>${i + 1}. ${esc(p.n)}</span><span class="n">${t("{n} pts", { n: p.s })}</span></li>`).join("");
   renderBoard(-1);
 }
 $("opts").addEventListener("click", e => { const b = e.target.closest(".opt"); if (b) answer(+b.dataset.i) });
@@ -205,15 +207,15 @@ function closeRoom() {
 }
 addEventListener("pagehide", () => { if (H) closeRoom() });
 function openLobby() {
-  if (!peerOK()) { warn("Couldn't load the phone connection. Check your internet connection and reload."); return }
-  const btn = $("startBtn"); btn.disabled = true; btn.textContent = "Opening the lobby…";
+  if (!peerOK()) { warn(t("Couldn't load the phone connection. Check your internet connection and reload.")); return }
+  const btn = $("startBtn"); btn.disabled = true; btn.textContent = t("Opening the lobby…");
   let tries = 0;
   const attempt = () => {
     const code = newCode();
     const peer = new window.Peer(PEERPFX + code.toLowerCase(), peerOpts());
     let opened = false;
     peer.on("open", () => {
-      opened = true; btn.disabled = false; btn.textContent = "Open the lobby";
+      opened = true; btn.disabled = false; btn.textContent = t("Open the lobby");
       H = { code, peer, conns: new Map(), phase: "lobby", rid: "", i: 0, players: new Map(), answers: {}, deadline: 0, gains: {} };
       $("roomCode").textContent = code; show("lobby"); renderLobby();
     });
@@ -224,7 +226,7 @@ function openLobby() {
     peer.on("disconnected", () => { if (H && H.peer === peer) { try { peer.reconnect() } catch (e) { } } });
     peer.on("error", err => {
       if (!opened && err && err.type === "unavailable-id" && tries++ < 5) { peer.destroy(); attempt(); return }
-      if (!opened) { btn.disabled = false; btn.textContent = "Open the lobby"; peer.destroy(); warn("Couldn't open a lobby. Check your internet connection and try again.") }
+      if (!opened) { btn.disabled = false; btn.textContent = t("Open the lobby"); peer.destroy(); warn(t("Couldn't open a lobby. Check your internet connection and try again.")) }
     });
   };
   attempt();
@@ -256,7 +258,7 @@ function renderLobby() {
   const ps = [...H.players.values()];
   $("lobbyList").innerHTML = ps.map(p => `<span class="chip${p.on ? "" : " off"}">${esc(p.n)}</span>`).join("");
   const on = ps.filter(p => p.on).length;
-  $("lobbyNote").textContent = on ? `${on} player${on > 1 ? "s" : ""} in. Start when everyone's here.` : "Waiting for players…";
+  $("lobbyNote").textContent = on ? (on > 1 ? t("{n} players in. Start when everyone's here.", { n: on }) : t("1 player in. Start when everyone's here.")) : t("Waiting for players…");
   $("hostGo").disabled = !on;
 }
 $("hostGo").addEventListener("click", hostStart);
@@ -264,7 +266,7 @@ $("lobbyExit").addEventListener("click", goHome);
 function hostStart() {
   if (!H) { openLobby(); return }
   deck = buildDeck(per);
-  if (!deck.length) { show("lobby"); $("lobbyNote").textContent = "No questions available for that category yet. Exit and pick another category."; return }
+  if (!deck.length) { show("lobby"); $("lobbyNote").textContent = t("No questions available for that category yet. Exit and pick another category."); return }
   for (const p of H.players.values()) p.s = 0;
   H.rid = Math.random().toString(36).slice(2, 8); idx = 0; hostAsk();
 }
@@ -272,16 +274,16 @@ function hostAsk() {
   clearTimeout(autoNext); clearInterval(timer);
   H.i = idx; H.answers = {}; H.gains = {}; locked = false; answering = false;
   show("play");
-  const hasC = paintQuestion(deck[idx], `Question ${idx + 1} of ${deck.length}`, clips[ck(deck[idx])] ? "Eyes on the screen" : "Answer on your phone", true);
+  const hasC = paintQuestion(deck[idx], t("Question {i} of {n}", { i: idx + 1, n: deck.length }), clips[ck(deck[idx])] ? t("Eyes on the screen") : t("Answer on your phone"), true);
   renderHostBoard();
   if (hasC) { H.phase = "watch"; hostWrite() } else beginAnswers();
 }
 function hostBeginAnswer() {
   H.phase = "answer"; H.deadline = Date.now() + T * 1000;
-  $("turn").textContent = "Answer on your phone"; hostAnsweredNote();
+  $("turn").textContent = t("Answer on your phone"); hostAnsweredNote();
   startTimer(null, hostReveal); hostWrite();
 }
-function hostAnsweredNote() { const on = [...H.players.values()].filter(p => p.on).length; $("result").textContent = `${Object.keys(H.answers).length} of ${on} answered` }
+function hostAnsweredNote() { const on = [...H.players.values()].filter(p => p.on).length; $("result").textContent = t("{a} of {n} answered", { a: Object.keys(H.answers).length, n: on }) }
 function hostReveal() {
   if (!H || H.phase !== "answer") return;
   clearInterval(timer); H.phase = "reveal"; answering = false;
@@ -289,9 +291,9 @@ function hostReveal() {
   for (const p of H.players.values()) { const a = H.answers[p.k]; let g = 0; if (a && a.c === q.a) { g = 100 + Math.round(a.left / T * 100); p.s += g } H.gains[p.k] = { g, r: !!(a && a.c === q.a) } }
   [...$("opts").children].forEach((b, k) => b.classList.add(k === q.a ? "right" : "dim"));
   const right = Object.values(H.gains).filter(x => x.r).length;
-  $("result").textContent = `It's ${LET[q.a]}: ${q.o[q.a]}. ${right} got it right.`;
+  $("result").textContent = t("It's {l}: {a}. {n} got it right.", { l: LET[q.a], a: q.o[q.a], n: right });
   renderHostBoard(true); hostWrite();
-  const nb = $("nextBtn"); let n = 10; const lab = () => nb.textContent = (idx + 1 < deck.length ? "Next question" : "See the results") + ` (${n})`; lab(); nb.classList.remove("hide");
+  const nb = $("nextBtn"); let n = 10; const lab = () => nb.textContent = (idx + 1 < deck.length ? t("Next question") : t("See the results")) + ` (${n})`; lab(); nb.classList.remove("hide");
   clearTimeout(autoNext); const tick = () => { n--; if (n <= 0) { next(); return } lab(); autoNext = setTimeout(tick, 1000) }; autoNext = setTimeout(tick, 1000);
 }
 function hostNext() { clearTimeout(autoNext); idx++; if (idx < deck.length) hostAsk(); else hostEnd() }
@@ -299,8 +301,8 @@ function hostEnd() {
   H.phase = "end"; stopVideo(); show("end");
   const r = [...H.players.values()].sort((a, b) => b.s - a.s);
   const tie = r.length > 1 && r[0].s === r[1].s;
-  $("winner").textContent = !r.length ? "Game over" : r.length === 1 ? `${r[0].n} scored ${r[0].s}` : tie ? "It's a tie at the top!" : `${r[0].n} takes the Oscar`;
-  $("podium").innerHTML = r.map((p, i) => `<li><span>${i + 1}. ${esc(p.n)}</span><span class="n">${p.s} pts</span></li>`).join("");
+  $("winner").textContent = !r.length ? t("Game over") : r.length === 1 ? t("{name} scored {n}", { name: r[0].n, n: r[0].s }) : tie ? t("It's a tie at the top!") : t("{name} takes the Oscar", { name: r[0].n });
+  $("podium").innerHTML = r.map((p, i) => `<li><span>${i + 1}. ${esc(p.n)}</span><span class="n">${t("{n} pts", { n: p.s })}</span></li>`).join("");
   renderHostBoard(); hostWrite();
 }
 function renderHostBoard(rev) {
@@ -313,7 +315,7 @@ function renderHostBoard(rev) {
 }
 function buildState() {
   const q = deck[H.i];
-  const st = { code: H.code, rid: H.rid, phase: H.phase, i: H.i, total: deck.length,
+  const st = { code: H.code, rid: H.rid, phase: H.phase, i: H.i, total: deck.length, lang: getLang(),
     players: [...H.players.values()].map(p => ({ k: p.k, n: p.n, s: p.s, a: p.k in H.answers, g: (H.gains[p.k] || {}).g || 0, r: !!(H.gains[p.k] || {}).r })) };
   if (q && (st.phase === "answer" || st.phase === "reveal" || st.phase === "watch")) { st.q = { c: q.c, q: q.q, o: q.o }; if (st.phase === "reveal") st.correct = q.a }
   return st;
@@ -330,14 +332,14 @@ $("joinForm").addEventListener("submit", e => {
   e.preventDefault(); const w = $("joinWarn"); w.classList.add("hide");
   const fail = t => { w.textContent = t; w.classList.remove("hide") };
   const name = $("jname").value.trim().slice(0, 18), code = $("jcode").value.trim().toUpperCase();
-  if (!name || code.length !== 4) { fail("Enter your name and the 4-letter code on the TV."); return }
-  if (!peerOK()) { fail("Couldn't load the connection. Check your internet and reload."); return }
+  if (!name || code.length !== 4) { fail(t("Enter your name and the 4-letter code on the TV.")); return }
+  if (!peerOK()) { fail(t("Couldn't load the connection. Check your internet and reload.")); return }
   try { localStorage.setItem("reelsmart-name", name) } catch (e) { }
-  const btn = $("joinBtn"); btn.disabled = true; btn.textContent = "Joining…";
+  const btn = $("joinBtn"); btn.disabled = true; btn.textContent = t("Joining…");
   phoneConnect(name, code, ok => {
-    btn.disabled = false; btn.textContent = "Join";
-    if (!ok) { fail(`Can't find room ${code}. Check the code on the TV, and that the TV is on the lobby screen.`); return }
-    $("phCode").textContent = "Room " + code; $("phName").textContent = name; show("phone"); renderPhone();
+    btn.disabled = false; btn.textContent = t("Join");
+    if (!ok) { fail(t("Can't find room {code}. Check the code on the TV, and that the TV is on the lobby screen.", { code })); return }
+    $("phCode").textContent = t("Room {code}", { code }); $("phName").textContent = name; show("phone"); renderPhone();
   });
 });
 function phoneConnect(name, code, done) {
@@ -351,7 +353,7 @@ function phoneConnect(name, code, done) {
     const conn = peer.connect(PEERPFX + code.toLowerCase(), { reliable: true });
     P.conn = conn;
     conn.on("open", () => { conn.send({ t: "hello", k: myKey, name }); settle(true) });
-    conn.on("data", d => { if (!P || P.conn !== conn || !d || d.t !== "state" || !d.st) return; P.st = d.st; P.lost = false; renderPhone() });
+    conn.on("data", d => { if (!P || P.conn !== conn || !d || d.t !== "state" || !d.st) return; P.st = d.st; P.lost = false; if (d.st.lang && d.st.lang !== getLang()) { setLang(d.st.lang); P.sig = ""; $("phCode").textContent = t("Room {code}", { code: P.code }) } renderPhone() });
     conn.on("close", () => { if (P && P.conn === conn && (!P.st || P.st.phase !== "closed")) { P.lost = true; P.sig = ""; renderPhone() } });
   });
   peer.on("error", err => { if (err && err.type === "peer-unavailable") { settle(false); try { peer.destroy() } catch (e) { } } else if (!settled) { settle(false) } else if (P) { P.lost = true; P.sig = ""; renderPhone() } });
@@ -363,38 +365,44 @@ $("phLeave").addEventListener("click", () => {
 function renderPhone() {
   if (!P) return; const st = P.st, b = $("phBody"), k = myKey;
   const me = st && Array.isArray(st.players) ? st.players.find(p => p.k === k) : null;
-  $("phScore").textContent = (me ? me.s : 0) + " pts";
+  $("phScore").textContent = t("{n} pts", { n: me ? me.s : 0 });
   const msg = (t, s) => `<div class="pmsg">${esc(t)}${s ? `<small>${esc(s)}</small>` : ""}</div>`;
-  if (P.lost) { b.innerHTML = msg("Lost connection to the TV.", "Tap Reconnect. Your score is kept.") + '<button class="start" id="reconn">Reconnect</button>'; P.sig = ""; return }
-  if (!st) { b.innerHTML = msg("Connecting…", "Looking for the game on the TV."); return }
-  if (st.phase === "closed") { b.innerHTML = msg("The host closed the game.", "Tap Leave to join another."); return }
-  if (st.phase === "lobby") { const n = (st.players || []).length; b.innerHTML = msg("You're in!", `Watch the TV. ${n} player${n === 1 ? "" : "s"} so far.`); return }
+  if (P.lost) { b.innerHTML = msg(t("Lost connection to the TV."), t("Tap Reconnect. Your score is kept.")) + `<button class="start" id="reconn">${esc(t("Reconnect"))}</button>`; P.sig = ""; return }
+  if (!st) { b.innerHTML = msg(t("Connecting…"), t("Looking for the game on the TV.")); return }
+  if (st.phase === "closed") { b.innerHTML = msg(t("The host closed the game."), t("Tap Leave to join another.")); return }
+  if (st.phase === "lobby") { const n = (st.players || []).length; b.innerHTML = msg(t("You're in!"), (n === 1 ? t("Watch the TV. 1 player so far.") : t("Watch the TV. {n} players so far.", { n }))); return }
   if (st.phase === "end") {
     const r = [...st.players].sort((a, c) => c.s - a.s); const pos = r.findIndex(p => p.k === k) + 1;
-    b.innerHTML = msg(pos === 1 ? "You win!" : pos ? `You finished #${pos}` : "Game over", me ? `${me.s} points` : ""); return;
+    b.innerHTML = msg(pos === 1 ? t("You win!") : pos ? t("You finished #{n}", { n: pos }) : t("Game over"), me ? t("{n} points", { n: me.s }) : ""); return;
   }
-  const head = `<div class="note" style="margin:10px 0 0">Question ${st.i + 1} of ${st.total} · ${esc(st.q ? st.q.c : "")}</div>`;
-  if (st.phase === "watch") { b.innerHTML = head + msg("Watch the clip on the TV…", "Your answers will appear here."); return }
+  const head = `<div class="note" style="margin:10px 0 0">${esc(t("Question {i} of {n}", { i: st.i + 1, n: st.total }))} · ${esc(st.q ? t(st.q.c) : "")}</div>`;
+  if (st.phase === "watch") { b.innerHTML = head + msg(t("Watch the clip on the TV…"), t("Your answers will appear here.")); return }
   const key = st.rid + ":" + st.i, mine = P.mine[key];
   const sig = st.phase + "|" + key + "|" + mine + "|" + (me && me.a);
   if (st.phase === "answer" && P.sig === sig && b.children.length) return;
   P.sig = sig;
   if (st.phase === "answer") {
-    if (mine != null) { b.innerHTML = head + `<div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i} ${i === mine ? "pick" : "faded"}" disabled><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>` + msg("Locked in!", "Waiting for everyone else."); return }
-    b.innerHTML = head + `<div class="q" style="margin-top:8px">${esc(st.q.q)}</div><div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i}" data-c="${i}"><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>`;
+    if (mine != null) { b.innerHTML = head + `<div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i} ${i === mine ? "pick" : "faded"}" disabled><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>` + msg(t("Locked in!"), t("Waiting for everyone else.")); return }
+    b.innerHTML = head + `<div class="q" style="margin-top:8px">${esc(t(st.q.q))}</div><div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i}" data-c="${i}"><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>`;
     return;
   }
   if (st.phase === "reveal") {
     const c = st.correct, right = me && me.r;
-    b.innerHTML = head + `<div class="big">${right ? "Correct!" : "Not quite"}</div>` + msg(right ? `+${me.g} points` : `It was ${LET[c]}: ${st.q.o[c]}`, "Next question coming up on the TV.");
+    b.innerHTML = head + `<div class="big">${esc(right ? t("Correct!") : t("Not quite"))}</div>` + msg(right ? t("+{n} points", { n: me.g }) : t("It was {l}: {a}.", { l: LET[c], a: st.q.o[c] }), t("Next question coming up on the TV."));
   }
 }
 $("phBody").addEventListener("click", e => {
-  if (e.target.id === "reconn" && P) { const { name, code } = P; e.target.disabled = true; e.target.textContent = "Reconnecting…"; phoneConnect(name, code, ok => { if (!ok && P) { P.lost = true; renderPhone() } }); return }
+  if (e.target.id === "reconn" && P) { const { name, code } = P; e.target.disabled = true; e.target.textContent = t("Reconnecting…"); phoneConnect(name, code, ok => { if (!ok && P) { P.lost = true; renderPhone() } }); return }
   const btn = e.target.closest(".pb[data-c]"); if (!btn || !P || !P.st || P.st.phase !== "answer" || !P.conn) return;
   const c = +btn.dataset.c, st = P.st; P.mine[st.rid + ":" + st.i] = c;
   try { P.conn.send({ t: "ans", k: myKey, rid: st.rid, i: st.i, c }) } catch (err) { delete P.mine[st.rid + ":" + st.i] }
   renderPhone();
 });
 
+/* ---------- language ---------- */
+const lp = $("langPick");
+lp.innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join("");
+lp.value = getLang();
+lp.addEventListener("change", () => { setLang(lp.value); renderHowto(); applyMode(); updateCount(); if (H) hostWrite() });
+applyStatic(); renderHowto();
 renderChips(); applyMode(); updateCount();
