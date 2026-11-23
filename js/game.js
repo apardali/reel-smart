@@ -101,6 +101,7 @@ function buildDeck(n) {
 function warn(t) { const w = $("setupWarn"); w.textContent = t; w.classList.remove("hide") }
 
 /* ---------- shared question view ---------- */
+let autoQ = null;
 let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = false;
 function paintQuestion(q, label, turnText, tiles) {
   $("qnum").textContent = label; $("pts").textContent = "";
@@ -111,7 +112,10 @@ function paintQuestion(q, label, turnText, tiles) {
   if (c) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
     vid.src = c.u; vid.currentTime = 0; const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { });
-    $("qtext").textContent = "Watch the clip…"; return true;
+    $("qtext").textContent = "Watch the clip…";
+    // Questions and answers appear 2 seconds into every clip; the clip keeps playing.
+    clearTimeout(autoQ); const myQ = q; autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering && !$("play").classList.contains("hide")) beginAnswers() }, 2000);
+    return true;
   }
   stopVideo(); $("screen").classList.add("hide"); $("revealBtn").classList.add("hide");
   $("emoji").textContent = q.e || ""; $("emoji").classList.toggle("hide", !q.e); return false;
@@ -163,7 +167,7 @@ $("againBtn").addEventListener("click", () => mode === "local" ? startLocal() : 
 $("newBtn").addEventListener("click", goHome);
 $("exitBtn").addEventListener("click", goHome);
 function goHome() {
-  clearInterval(timer); clearTimeout(autoNext); locked = true; answering = false; stopVideo();
+  clearTimeout(autoQ); clearInterval(timer); clearTimeout(autoNext); locked = true; answering = false; stopVideo();
   if (H) closeRoom();
   players.forEach(p => p.s = 0); show("setup"); renderBoard(-1); window.scrollTo(0, 0);
 }
