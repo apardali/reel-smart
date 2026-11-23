@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="bg photo" aria-hidden="true"><img class="bg-wide" src="img/background-wide.svg" alt=""><img class="bg-blur" src="img/background.jpg" alt=""><img class="bg-main" src="img/background.jpg" alt=""></div>
+<div class="bg photo" aria-hidden="true"><img class="bg-wide" src="img/background-tv.jpg" alt=""><img class="bg-blur" src="img/background.jpg" alt=""><img class="bg-main" src="img/background.jpg" alt=""></div>
 <div class="wrap">
  <header class="marquee"><div class="bulbs" id="bulbs"></div>
   <img class="lg-art" src="img/logo-art.jpg" alt="" aria-hidden="true">
@@ -20,10 +20,10 @@
   <p>Movie &amp; TV trivia night</p></header>
 
  <section class="stage" id="setup">
-  <div class="joinbar"><strong>Playing on your phone?</strong><button id="toJoin">Join a game</button><div class="jsub">Enter the room code shown on the TV <br>to join the game from your phone.</div></div>
   <h2>Set up a game</h2>
   <div class="setgrid">
    <div class="setA">
+    <div class="joinbar"><strong>Playing on your phone?</strong><button id="toJoin">Join a game</button><div class="jsub">Enter the room code shown on the TV <br>to join the game from your phone.</div></div>
   <div class="modes" id="modePick">
    <button type="button" class="mode" data-v="host" aria-pressed="true">TV + phones<small>This screen is the TV. Everyone answers on their phone.</small></button>
    <button type="button" class="mode" data-v="local" aria-pressed="false">One screen<small>Take turns on this device. No phones needed.</small></button>
@@ -47,19 +47,24 @@
    <button type="button" class="pill" data-v="clips" aria-pressed="false">Name that scene</button>
    <button type="button" class="pill" data-v="hard" aria-pressed="false">Clip challenge (hard)</button>
   </div>
+    <div class="setBq">
   <label id="lenLabel">Questions</label>
   <div class="row" id="lenPick">
    <button type="button" class="pill" data-v="10" aria-pressed="true">10</button>
    <button type="button" class="pill" data-v="20" aria-pressed="false">20</button>
    <button type="button" class="pill" data-v="30" aria-pressed="false">30</button>
   </div>
+    </div>
    </div>
   </div>
+  <div class="setfoot">
   <button class="start" id="startBtn">Open the lobby</button>
   <p class="status warn hide" id="setupWarn"></p>
+  <div class="tvnote"><p>Players join on their phones with the room code shown on the TV.<br>Everyone answers every question. Faster right answers score more.</p></div>
   <p class="status" id="clipCount" style="margin-top:12px">Loading clips…</p>
   <p class="note" id="modeNote"></p>
   <div class="row" style="justify-content:flex-end;margin-top:12px"><a class="ghost exit btnlink" href="admin.html">Admin</a></div>
+  </div>
  </section>
 
  <section class="stage hide" id="lobby">
