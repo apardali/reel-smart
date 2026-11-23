@@ -7,7 +7,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 const T = 20, LET = ["A", "B", "C", "D"];
 const SCREENS = ["setup", "lobby", "join", "phone", "play", "end"];
-let mode = "host", cat = "mix", per = 5;
+let mode = "host", cat = "mix", per = 10;
 const show = id => {
   SCREENS.forEach(s => $(s).classList.toggle("hide", s !== id));
   document.body.classList.toggle("ingame", id === "play" || id === "lobby");
