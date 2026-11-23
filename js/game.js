@@ -1,4 +1,4 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795474686";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795475280";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -111,7 +111,7 @@ function paintQuestion(q, label, turnText, tiles) {
   T = BASE_T;
   $("qnum").textContent = label; $("pts").textContent = "";
   $("turn").textContent = turnText; $("cat").textContent = t(q.c); $("qtext").textContent = t(q.q);
-  $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(o)}</span></button>`).join("");
+  $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(t(o))}</span></button>`).join("");
   $("result").textContent = ""; $("nextBtn").classList.add("hide");
   const c = clips[ck(q)];
   if (c) {
@@ -165,7 +165,7 @@ function answer(i) {
   const q = deck[idx], p = players[idx % players.length];
   [...$("opts").children].forEach((b, k) => { b.disabled = true; if (k === q.a) b.classList.add("right"); else if (k === i) b.classList.add("wrong") });
   if (i === q.a) { const pts = 100 + Math.round(Math.max(0, left) / T * 100); p.s += pts; $("result").textContent = t("Correct! +{n} points", { n: pts }); $("pts").textContent = `+${pts}` }
-  else $("result").textContent = (i < 0 ? t("Time's up.") : t("Not quite.")) + " " + t("It was {a}.", { a: q.o[q.a] });
+  else $("result").textContent = (i < 0 ? t("Time's up.") : t("Not quite.")) + " " + t("It was {a}.", { a: t(q.o[q.a]) });
   renderBoard(idx % players.length);
   const nb = $("nextBtn"); nb.textContent = idx + 1 < deck.length ? t("Next question") : t("See the results"); nb.classList.remove("hide"); nb.focus();
 }
@@ -291,7 +291,7 @@ function hostReveal() {
   for (const p of H.players.values()) { const a = H.answers[p.k]; let g = 0; if (a && a.c === q.a) { g = 100 + Math.round(a.left / T * 100); p.s += g } H.gains[p.k] = { g, r: !!(a && a.c === q.a) } }
   [...$("opts").children].forEach((b, k) => b.classList.add(k === q.a ? "right" : "dim"));
   const right = Object.values(H.gains).filter(x => x.r).length;
-  $("result").textContent = t("It's {l}: {a}. {n} got it right.", { l: LET[q.a], a: q.o[q.a], n: right });
+  $("result").textContent = t("It's {l}: {a}. {n} got it right.", { l: LET[q.a], a: t(q.o[q.a]), n: right });
   renderHostBoard(true); hostWrite();
   const nb = $("nextBtn"); let n = 10; const lab = () => nb.textContent = (idx + 1 < deck.length ? t("Next question") : t("See the results")) + ` (${n})`; lab(); nb.classList.remove("hide");
   clearTimeout(autoNext); const tick = () => { n--; if (n <= 0) { next(); return } lab(); autoNext = setTimeout(tick, 1000) }; autoNext = setTimeout(tick, 1000);
@@ -382,13 +382,13 @@ function renderPhone() {
   if (st.phase === "answer" && P.sig === sig && b.children.length) return;
   P.sig = sig;
   if (st.phase === "answer") {
-    if (mine != null) { b.innerHTML = head + `<div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i} ${i === mine ? "pick" : "faded"}" disabled><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>` + msg(t("Locked in!"), t("Waiting for everyone else.")); return }
-    b.innerHTML = head + `<div class="q" style="margin-top:8px">${esc(t(st.q.q))}</div><div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i}" data-c="${i}"><i>${LET[i]}</i>${esc(o)}</button>`).join("")}</div>`;
+    if (mine != null) { b.innerHTML = head + `<div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i} ${i === mine ? "pick" : "faded"}" disabled><i>${LET[i]}</i>${esc(t(o))}</button>`).join("")}</div>` + msg(t("Locked in!"), t("Waiting for everyone else.")); return }
+    b.innerHTML = head + `<div class="q" style="margin-top:8px">${esc(t(st.q.q))}</div><div class="pgrid2">${st.q.o.map((o, i) => `<button class="pb L${i}" data-c="${i}"><i>${LET[i]}</i>${esc(t(o))}</button>`).join("")}</div>`;
     return;
   }
   if (st.phase === "reveal") {
     const c = st.correct, right = me && me.r;
-    b.innerHTML = head + `<div class="big">${esc(right ? t("Correct!") : t("Not quite"))}</div>` + msg(right ? t("+{n} points", { n: me.g }) : t("It was {l}: {a}.", { l: LET[c], a: st.q.o[c] }), t("Next question coming up on the TV."));
+    b.innerHTML = head + `<div class="big">${esc(right ? t("Correct!") : t("Not quite"))}</div>` + msg(right ? t("+{n} points", { n: me.g }) : t("It was {l}: {a}.", { l: LET[c], a: t(st.q.o[c]) }), t("Next question coming up on the TV."));
   }
 }
 $("phBody").addEventListener("click", e => {

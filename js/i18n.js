@@ -1,4 +1,6 @@
-// Interface translations. Questions themselves are still English (translation in progress).
+// Interface translations. Question and option translations live in q-<lang>.js.
+import QEL from "./q-el.js?v=1795475280";
+const QD = { el: QEL };
 export const LANGS = [["en", "English"], ["el", "Ελληνικά"], ["es", "Español"], ["fr", "Français"], ["pt", "Português"]];
 const D = {
 "el": {
@@ -491,7 +493,7 @@ try { lang = localStorage.getItem("reelsmart-lang") || "" } catch (e) { }
 if (!LANGS.some(l => l[0] === lang)) { const n = (navigator.language || "en").slice(0, 2).toLowerCase(); lang = LANGS.some(l => l[0] === n) ? n : "en" }
 export const getLang = () => lang;
 export function setLang(l) { if (!LANGS.some(x => x[0] === l)) return; lang = l; try { localStorage.setItem("reelsmart-lang", l) } catch (e) { } document.documentElement.lang = l; applyStatic() }
-export function t(k, v) { let s = (D[lang] && D[lang][k]) || k; if (v) s = s.replace(/\{(\w+)\}/g, (m, n) => (n in v ? v[n] : m)); return s }
+export function t(k, v) { let s = (D[lang] && D[lang][k]) || (QD[lang] && QD[lang][k]) || k; if (v) s = s.replace(/\{(\w+)\}/g, (m, n) => (n in v ? v[n] : m)); return s }
 // Static text: remember each text node's English original and swap it.
 const orig = new WeakMap();
 export function applyStatic(root = document.body) {

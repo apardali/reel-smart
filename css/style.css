@@ -641,3 +641,14 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
  #langPick{min-height:calc(var(--u)*5.6);font-size:calc(var(--u)*2.2);padding:0 calc(var(--u)*4.4) 0 calc(var(--u)*2.2);background-position:right calc(var(--u)*1.6) center,0 0}
 }
 @media (min-aspect-ratio:4/3) and (min-width:900px){#setup .mode{padding-right:calc(var(--u)*5.6)}}
+/* language button opposite Admin */
+.footrow{justify-content:space-between!important}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .setfoot{grid-template-columns:calc(var(--u)*24) minmax(0,1fr) calc(var(--u)*58) minmax(0,1fr) calc(var(--u)*20)}
+ .setfoot .footrow{display:contents}
+ .setfoot .langwrap{grid-column:1;grid-row:1;justify-self:start}
+ .setfoot .tvnote{grid-column:2;grid-row:1}
+ #setup .setfoot .start{grid-column:3}
+ #setup .setfoot #setupWarn{grid-column:3}
+ .setfoot .footrow>a{grid-column:5;grid-row:1;justify-self:end}
+}
