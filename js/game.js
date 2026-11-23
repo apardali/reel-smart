@@ -1,4 +1,4 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795475280";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795475462";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);

@@ -1,6 +1,7 @@
 // Interface translations. Question and option translations live in q-<lang>.js.
-import QEL from "./q-el.js?v=1795475280";
-const QD = { el: QEL };
+import QEL from "./q-el.js?v=1795475462";
+import QPT from "./q-pt.js?v=1795475462";
+const QD = { el: QEL, pt: QPT };
 export const LANGS = [["en", "English"], ["el", "Ελληνικά"], ["es", "Español"], ["fr", "Français"], ["pt", "Português"]];
 const D = {
 "el": {
