@@ -1,4 +1,4 @@
-import { Q } from "./questions.js";
+import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
