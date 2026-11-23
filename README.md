@@ -66,7 +66,7 @@ Repo **Settings → Pages** → Source: **Deploy from a branch** → `main` / `(
 
 ## Notes
 - Clips up to 100 MB each (mp4/H.264 plays everywhere).
-- Old game rooms stay in Firestore. To clean them up automatically, add a TTL policy on the `rooms` collection group in the Firestore console, or delete the `rooms` collection now and then.
+- Nothing about a game is saved: scores live only in the TV's memory, and the live game room is deleted when the TV exits the game or closes the page. If a TV loses power mid-game its room can be left behind; optionally add a Firestore **TTL policy** on the `rooms` collection group using the `expiresAt` field so those are wiped automatically after 6 hours.
 - **Licensing:** a public site streaming studio clips needs licenses from the rights holders before you launch commercially.
 
 ## Local testing

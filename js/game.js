@@ -162,7 +162,7 @@ $("newBtn").addEventListener("click", goHome);
 $("exitBtn").addEventListener("click", goHome);
 function goHome() {
   clearInterval(timer); clearTimeout(autoNext); locked = true; answering = false; stopVideo();
-  if (H) { H.phase = "closed"; hostWrite(); if (H.unsub) H.unsub(); H = null }
+  if (H) closeRoom();
   players.forEach(p => p.s = 0); show("setup"); renderBoard(-1); window.scrollTo(0, 0);
 }
 document.addEventListener("keydown", e => {
@@ -172,7 +172,19 @@ document.addEventListener("keydown", e => {
   else if ((e.key === "Enter" || e.key === " ") && !$("nextBtn").classList.contains("hide") && document.activeElement !== $("nextBtn")) { e.preventDefault(); next() }
 });
 
-/* ---------- TV host mode (Firestore room) ---------- */
+/* ---------- TV host mode (Firestore room) ----------
+   Nothing about a game is kept. Scores live only in the TV's memory; the room
+   document is just the live channel to the phones and is deleted when the TV
+   leaves the game (or closes the page). */
+async function closeRoom() {
+  const h = H; H = null; if (!h || !FB) return;
+  if (h.unsub) h.unsub();
+  const { F, db } = FB;
+  try { await F.updateDoc(h.ref, { "state.phase": "closed" }) } catch (e) { }
+  try { const ps = await F.getDocs(F.collection(db, "rooms", h.code, "players")); await Promise.all(ps.docs.map(d => F.deleteDoc(d.ref))) } catch (e) { }
+  try { await F.deleteDoc(h.ref) } catch (e) { }
+}
+addEventListener("pagehide", () => { if (H) closeRoom() });
 let H = null, autoNext = null;
 const CODECH = "ABCDEFGHJKMNPQRSTUVWXYZ";
 const newCode = () => Array.from({ length: 4 }, () => CODECH[Math.floor(Math.random() * CODECH.length)]).join("");
@@ -185,7 +197,7 @@ async function openLobby() {
     let code = null;
     for (let t = 0; t < 6 && !code; t++) {
       const c = newCode();
-      try { await F.setDoc(F.doc(db, "rooms", c), { hostUid: ME.uid, created: F.serverTimestamp(), state: { phase: "lobby", code: c, players: [] } }); code = c }
+      try { await F.setDoc(F.doc(db, "rooms", c), { hostUid: ME.uid, created: F.serverTimestamp(), expiresAt: new Date(Date.now() + 6 * 3600e3), state: { phase: "lobby", code: c, players: [] } }); code = c }
       catch (e) { /* code taken by another host: try another */ }
     }
     if (!code) throw new Error("no code");
