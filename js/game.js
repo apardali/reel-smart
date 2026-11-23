@@ -102,7 +102,8 @@ function buildDeck(n) {
 function warn(t) { const w = $("setupWarn"); w.textContent = t; w.classList.remove("hide") }
 
 /* ---------- shared question view ---------- */
-let autoQ = null;
+let autoQ = null, clipQ = null;
+const ANSWERS_AT = 25; // seconds of clip before the answers appear
 let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = false;
 function paintQuestion(q, label, turnText, tiles) {
   T = BASE_T;
@@ -115,8 +116,11 @@ function paintQuestion(q, label, turnText, tiles) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
     vid.src = c.u; vid.currentTime = 0; const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { });
     $("qtext").textContent = "Watch the clip…";
-    // Questions and answers appear 2 seconds into every clip; the clip keeps playing.
-    clearTimeout(autoQ); const myQ = q; autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering && !$("play").classList.contains("hide")) beginAnswers() }, 2000);
+    // The question shows after 2 s; the answers pop up once most of the clip has played
+    // (25 s in, or just before the end of a shorter clip). The clip keeps playing.
+    clearTimeout(autoQ); const myQ = q;
+    autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering) $("qtext").textContent = myQ.q }, 2000);
+    clipQ = myQ;
     return true;
   }
   stopVideo(); $("screen").classList.add("hide"); $("revealBtn").classList.add("hide");
@@ -128,6 +132,11 @@ function startTimer(onTick, onEnd) {
   left = T; $("bar").style.width = "100%"; clearInterval(timer);
   timer = setInterval(() => { left -= .1; $("bar").style.width = Math.max(0, left / T * 100) + "%"; onTick && onTick(); if (left <= 0) onEnd() }, 100);
 }
+vid.addEventListener("timeupdate", () => {
+  if (!clipQ || answering || deck[idx] !== clipQ || $("play").classList.contains("hide")) return;
+  const d = vid.duration, at = isFinite(d) && d > 0 ? Math.min(ANSWERS_AT, Math.max(1, d - 1.5)) : ANSWERS_AT;
+  if (vid.currentTime >= at) beginAnswers();
+});
 vid.addEventListener("ended", () => { if (!$("play").classList.contains("hide")) beginAnswers() });
 vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = "That clip wouldn't play, so here's the question without it."; $("screen").classList.add("hide"); beginAnswers() } });
 $("revealBtn").addEventListener("click", () => { vid.pause(); beginAnswers() });
