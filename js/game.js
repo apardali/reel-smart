@@ -1,5 +1,4 @@
 import { Q } from "./questions.js";
-import { loadFirebase, configured, setupBanner } from "./fb.js";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
@@ -16,22 +15,22 @@ const show = id => {
 };
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a };
 const vid = $("vid");
-setupBanner($("setupBanner"));
 $("siteUrl").textContent = location.host + location.pathname.replace(/index\.html$/, "");
 
-/* ---------- Firebase ---------- */
-let FB = null, ME = null, clips = {}, CUSTOM = [], clipsReady = false;
+/* ---------- clips + custom questions (files in the repo) ---------- */
+let clips = {}, CUSTOM = [], clipsReady = false;
 const ck = q => q.clip || q.id;
 const hasClip = q => !!clips[ck(q)];
 function updateCount() {
   const n = Object.keys(clips).length;
-  $("clipCount").textContent = !configured ? "Clips are off until Firebase is set up." : !clipsReady ? "Loading clips…" : n ? `${n} clip${n > 1 ? "s" : ""} ready` : "No clips yet. Add them in Admin.";
+  $("clipCount").textContent = !clipsReady ? "Loading clips…" : n ? `${n} clip${n > 1 ? "s" : ""} ready` : "No clips yet. See Admin for how to add them.";
 }
 function rebuildQ() {
   Q.length = BASE;
   for (const d of CUSTOM) {
     if (!d || !d.key) continue;
     const kind = d.kind === "tv" ? "tv" : "movie";
+    if (d.clip) clips[d.key] = { u: d.clip };
     if (d.scene && Array.isArray(d.scene.o) && d.scene.o.length === 4)
       Q.push({ c: "Name that scene", t: kind, custom: 1, q: kind === "tv" ? "Which show is this scene from?" : "Which movie is this scene from?", o: d.scene.o.map(String), a: +d.scene.a || 0, id: d.key });
     (Array.isArray(d.hard) ? d.hard : []).forEach((h, i) => {
@@ -40,22 +39,25 @@ function rebuildQ() {
     });
   }
 }
-const ready = (async () => {
-  if (!configured) { clipsReady = true; updateCount(); return false }
-  try {
-    FB = await loadFirebase();
-    const { A, F, auth, db } = FB;
-    await new Promise(res => { const un = A.onAuthStateChanged(auth, u => { if (u) { ME = u; un(); res() } }); });
-    F.onSnapshot(F.collection(db, "clips"), sn => { const m = {}; sn.forEach(d => { const v = d.data(); if (v && v.u) m[d.id] = v }); clips = m; clipsReady = true; updateCount() }, () => { clipsReady = true; updateCount() });
-    F.onSnapshot(F.collection(db, "custom"), sn => { CUSTOM = sn.docs.map(d => ({ key: d.id, ...d.data() })); rebuildQ() }, () => { });
-    return true;
-  } catch (e) { console.error(e); clipsReady = true; updateCount(); return false }
-})();
-// Sign in anonymously unless someone (the admin) is already signed in on this browser.
+const getJSON = u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null);
 (async () => {
-  if (!configured) return;
-  try { const { A, auth } = await loadFirebase(); await auth.authStateReady(); if (!auth.currentUser) await A.signInAnonymously(auth) } catch (e) { console.error(e) }
+  const [cm, cu] = await Promise.all([getJSON("data/clips.json"), getJSON("data/custom.json")]);
+  if (cm && typeof cm === "object") for (const [k, v] of Object.entries(cm)) if (typeof v === "string" && v) clips[k] = { u: v };
+  if (Array.isArray(cu)) CUSTOM = cu;
+  rebuildQ(); clipsReady = true; updateCount();
 })();
+
+/* ---------- peer-to-peer link (PeerJS) ---------- */
+// The free PeerJS service only introduces phones to the TV; after that they talk directly.
+// For testing or a self-hosted broker: ?peerhost=HOST&peerport=PORT&peerpath=/&peersecure=0
+function peerOpts() {
+  const u = new URLSearchParams(location.search), o = { debug: 0 };
+  if (u.get("peerhost")) { o.host = u.get("peerhost"); o.port = +(u.get("peerport") || 443); o.path = u.get("peerpath") || "/"; o.secure = u.get("peersecure") !== "0" }
+  return o;
+}
+const PEERPFX = "reelsmart-tv-";
+const peerOK = () => typeof window.Peer === "function";
+const myKey = (() => { try { let k = localStorage.getItem("reelsmart-k"); if (!k) { k = Math.random().toString(36).slice(2, 12); localStorage.setItem("reelsmart-k", k) } return k } catch (e) { return Math.random().toString(36).slice(2, 12) } })();
 
 /* ---------- marquee bulbs ---------- */
 const bulbs = $("bulbs");
@@ -172,56 +174,61 @@ document.addEventListener("keydown", e => {
   else if ((e.key === "Enter" || e.key === " ") && !$("nextBtn").classList.contains("hide") && document.activeElement !== $("nextBtn")) { e.preventDefault(); next() }
 });
 
-/* ---------- TV host mode (Firestore room) ----------
-   Nothing about a game is kept. Scores live only in the TV's memory; the room
-   document is just the live channel to the phones and is deleted when the TV
-   leaves the game (or closes the page). */
-async function closeRoom() {
-  const h = H; H = null; if (!h || !FB) return;
-  if (h.unsub) h.unsub();
-  const { F, db } = FB;
-  try { await F.updateDoc(h.ref, { "state.phase": "closed" }) } catch (e) { }
-  try { const ps = await F.getDocs(F.collection(db, "rooms", h.code, "players")); await Promise.all(ps.docs.map(d => F.deleteDoc(d.ref))) } catch (e) { }
-  try { await F.deleteDoc(h.ref) } catch (e) { }
-}
-addEventListener("pagehide", () => { if (H) closeRoom() });
+/* ---------- TV host mode ----------
+   Nothing about a game is kept anywhere: scores live only in the TV's memory. */
 let H = null, autoNext = null;
 const CODECH = "ABCDEFGHJKMNPQRSTUVWXYZ";
 const newCode = () => Array.from({ length: 4 }, () => CODECH[Math.floor(Math.random() * CODECH.length)]).join("");
-async function openLobby() {
-  if (!configured) { warn("TV + phones needs Firebase set up first (see README). One screen mode works now."); return }
-  const btn = $("startBtn"); btn.disabled = true; btn.textContent = "Opening the lobby…";
-  try {
-    if (!await ready || !ME) throw new Error("not ready");
-    const { F, db } = FB;
-    let code = null;
-    for (let t = 0; t < 6 && !code; t++) {
-      const c = newCode();
-      try { await F.setDoc(F.doc(db, "rooms", c), { hostUid: ME.uid, created: F.serverTimestamp(), expiresAt: new Date(Date.now() + 6 * 3600e3), state: { phase: "lobby", code: c, players: [] } }); code = c }
-      catch (e) { /* code taken by another host: try another */ }
-    }
-    if (!code) throw new Error("no code");
-    H = { code, ref: F.doc(db, "rooms", code), phase: "lobby", rid: "", i: 0, players: new Map(), answers: {}, deadline: 0, gains: {} };
-    H.unsub = F.onSnapshot(F.collection(db, "rooms", code, "players"), sn => syncPlayers(sn.docs.map(d => ({ k: d.id, ...d.data() }))));
-    $("roomCode").textContent = code; show("lobby"); renderLobby();
-  } catch (e) { console.error(e); warn("Couldn't open a lobby. Check your connection and try again.") }
-  finally { btn.disabled = false; btn.textContent = "Open the lobby" }
+function closeRoom() {
+  const h = H; H = null; if (!h) return;
+  for (const c of h.conns.values()) { try { c.send({ t: "state", st: { phase: "closed", code: h.code } }) } catch (e) { } }
+  setTimeout(() => { try { h.peer.destroy() } catch (e) { } }, 400);
 }
-function syncPlayers(list) {
-  if (!H) return; let changed = false; const here = new Set();
-  for (const p of list) {
-    here.add(p.k);
-    const n = String(p.name || "Player").slice(0, 18);
-    let pl = H.players.get(p.k);
-    if (!pl) { pl = { k: p.k, n, s: 0, on: true }; H.players.set(p.k, pl); changed = true }
-    else if (pl.n !== n || !pl.on) { pl.n = n; pl.on = true; changed = true }
-    const a = p.ans;
-    if (H.phase === "answer" && a && a.rid === H.rid && a.i === H.i && !(p.k in H.answers) && Number.isInteger(a.c) && a.c >= 0 && a.c < deck[H.i].o.length) {
-      H.answers[p.k] = { c: a.c, left: Math.max(0, (H.deadline - Date.now()) / 1000) }; changed = true;
-    }
+addEventListener("pagehide", () => { if (H) closeRoom() });
+function openLobby() {
+  if (!peerOK()) { warn("Couldn't load the phone connection. Check your internet connection and reload."); return }
+  const btn = $("startBtn"); btn.disabled = true; btn.textContent = "Opening the lobby…";
+  let tries = 0;
+  const attempt = () => {
+    const code = newCode();
+    const peer = new window.Peer(PEERPFX + code.toLowerCase(), peerOpts());
+    let opened = false;
+    peer.on("open", () => {
+      opened = true; btn.disabled = false; btn.textContent = "Open the lobby";
+      H = { code, peer, conns: new Map(), phase: "lobby", rid: "", i: 0, players: new Map(), answers: {}, deadline: 0, gains: {} };
+      $("roomCode").textContent = code; show("lobby"); renderLobby();
+    });
+    peer.on("connection", conn => {
+      conn.on("data", d => onPhoneMsg(conn, d));
+      conn.on("close", () => { if (!H || H.peer !== peer) return; for (const [k, c] of H.conns) if (c === conn) { H.conns.delete(k); syncPlayers() } });
+    });
+    peer.on("disconnected", () => { if (H && H.peer === peer) { try { peer.reconnect() } catch (e) { } } });
+    peer.on("error", err => {
+      if (!opened && err && err.type === "unavailable-id" && tries++ < 5) { peer.destroy(); attempt(); return }
+      if (!opened) { btn.disabled = false; btn.textContent = "Open the lobby"; peer.destroy(); warn("Couldn't open a lobby. Check your internet connection and try again.") }
+    });
+  };
+  attempt();
+}
+function onPhoneMsg(conn, d) {
+  if (!H || !d || typeof d !== "object") return;
+  const k = String(d.k || "").slice(0, 20); if (!k) return;
+  if (d.t === "hello") {
+    const n = String(d.name || "Player").trim().slice(0, 18) || "Player";
+    const old = H.conns.get(k); if (old && old !== conn) { try { old.close() } catch (e) { } }
+    H.conns.set(k, conn);
+    const pl = H.players.get(k); if (pl) pl.n = n; else H.players.set(k, { k, n, s: 0, on: true });
+    syncPlayers(); sendState(conn); return;
   }
-  for (const pl of H.players.values()) if (!here.has(pl.k) && pl.on) { pl.on = false; changed = true }
-  if (!changed) return;
+  if (d.t === "ans" && H.phase === "answer" && d.rid === H.rid && d.i === H.i && !(k in H.answers) && H.players.has(k) && Number.isInteger(d.c) && d.c >= 0 && d.c < deck[H.i].o.length) {
+    H.answers[k] = { c: d.c, left: Math.max(0, (H.deadline - Date.now()) / 1000) };
+    hostWrite(); renderHostBoard(); hostAnsweredNote();
+    const on = [...H.players.values()].filter(p => p.on); if (on.length && on.every(p => p.k in H.answers)) hostReveal();
+  }
+}
+function syncPlayers() {
+  if (!H) return;
+  for (const pl of H.players.values()) pl.on = H.conns.has(pl.k) && H.conns.get(pl.k).open !== false;
   hostWrite();
   if (H.phase === "lobby") renderLobby();
   else { renderHostBoard(); if (H.phase === "answer") { hostAnsweredNote(); const on = [...H.players.values()].filter(p => p.on); if (on.length && on.every(p => p.k in H.answers)) hostReveal() } }
@@ -285,52 +292,61 @@ function renderHostBoard(rev) {
     return `<div class="score${p.on ? "" : " off"}"><span>${esc(p.n)}</span><span>${tag}${p.s}</span></div>`;
   }).join("") || '<div class="score"><span>No players yet</span><span></span></div>';
 }
-let lastWrite = "";
-function hostWrite() {
-  if (!H || !FB) return;
+function buildState() {
   const q = deck[H.i];
   const st = { code: H.code, rid: H.rid, phase: H.phase, i: H.i, total: deck.length,
     players: [...H.players.values()].map(p => ({ k: p.k, n: p.n, s: p.s, a: p.k in H.answers, g: (H.gains[p.k] || {}).g || 0, r: !!(H.gains[p.k] || {}).r })) };
-  if (q && (st.phase === "answer" || st.phase === "reveal" || st.phase === "watch")) { st.q = { c: q.c, q: q.q, o: q.o }; if (st.phase === "answer") st.secs = T; if (st.phase === "reveal") st.correct = q.a }
-  const j = JSON.stringify(st); if (j === lastWrite) return; lastWrite = j;
-  FB.F.updateDoc(H.ref, { state: st, updated: FB.F.serverTimestamp() }).catch(e => console.error(e));
+  if (q && (st.phase === "answer" || st.phase === "reveal" || st.phase === "watch")) { st.q = { c: q.c, q: q.q, o: q.o }; if (st.phase === "reveal") st.correct = q.a }
+  return st;
 }
+function sendState(conn) { if (!H) return; try { conn.send({ t: "state", st: buildState() }) } catch (e) { } }
+function hostWrite() { if (!H) return; const st = buildState(); for (const c of H.conns.values()) { try { c.send({ t: "state", st }) } catch (e) { } } }
 
 /* ---------- phone controller ---------- */
 let P = null;
 $("toJoin").addEventListener("click", () => { show("join"); try { $("jname").value = localStorage.getItem("reelsmart-name") || "" } catch (e) { } $("jname").focus() });
 $("joinBack").addEventListener("click", () => show("setup"));
 $("jcode").addEventListener("input", e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "") });
-$("joinForm").addEventListener("submit", async e => {
+$("joinForm").addEventListener("submit", e => {
   e.preventDefault(); const w = $("joinWarn"); w.classList.add("hide");
   const fail = t => { w.textContent = t; w.classList.remove("hide") };
   const name = $("jname").value.trim().slice(0, 18), code = $("jcode").value.trim().toUpperCase();
   if (!name || code.length !== 4) { fail("Enter your name and the 4-letter code on the TV."); return }
-  if (!configured) { fail("This site isn't connected to its game server yet."); return }
+  if (!peerOK()) { fail("Couldn't load the connection. Check your internet and reload."); return }
+  try { localStorage.setItem("reelsmart-name", name) } catch (e) { }
   const btn = $("joinBtn"); btn.disabled = true; btn.textContent = "Joining…";
-  try {
-    if (!await ready || !ME) throw new Error("not ready");
-    const { F, db } = FB;
-    const room = await F.getDoc(F.doc(db, "rooms", code));
-    if (!room.exists() || (room.data().state || {}).phase === "closed") { fail(`Can't find room ${code}. Check the code on the TV.`); return }
-    try { localStorage.setItem("reelsmart-name", name) } catch (e) { }
-    const pref = F.doc(db, "rooms", code, "players", ME.uid);
-    await F.setDoc(pref, { name, ans: null, joined: F.serverTimestamp() });
-    P = { name, code, pref, st: room.data().state || null, mine: {}, sig: "" };
-    P.unsub = F.onSnapshot(F.doc(db, "rooms", code), s => { if (!P) return; P.st = s.exists() ? (s.data().state || null) : { phase: "closed" }; renderPhone() });
+  phoneConnect(name, code, ok => {
+    btn.disabled = false; btn.textContent = "Join";
+    if (!ok) { fail(`Can't find room ${code}. Check the code on the TV, and that the TV is on the lobby screen.`); return }
     $("phCode").textContent = "Room " + code; $("phName").textContent = name; show("phone"); renderPhone();
-  } catch (err) { console.error(err); fail("Couldn't join. Check your connection and try again.") }
-  finally { btn.disabled = false; btn.textContent = "Join" }
+  });
 });
+function phoneConnect(name, code, done) {
+  if (P && P.peer) { try { P.peer.destroy() } catch (e) { } }
+  const peer = new window.Peer(peerOpts());
+  const keep = P && P.code === code ? P : null;
+  P = { name, code, peer, conn: null, st: keep ? keep.st : null, mine: keep ? keep.mine : {}, sig: "", lost: false };
+  let settled = false; const settle = ok => { if (!settled) { settled = true; clearTimeout(to); done && done(ok) } };
+  const to = setTimeout(() => { settle(false); try { peer.destroy() } catch (e) { } }, 12000);
+  peer.on("open", () => {
+    const conn = peer.connect(PEERPFX + code.toLowerCase(), { reliable: true });
+    P.conn = conn;
+    conn.on("open", () => { conn.send({ t: "hello", k: myKey, name }); settle(true) });
+    conn.on("data", d => { if (!P || P.conn !== conn || !d || d.t !== "state" || !d.st) return; P.st = d.st; P.lost = false; renderPhone() });
+    conn.on("close", () => { if (P && P.conn === conn && (!P.st || P.st.phase !== "closed")) { P.lost = true; P.sig = ""; renderPhone() } });
+  });
+  peer.on("error", err => { if (err && err.type === "peer-unavailable") { settle(false); try { peer.destroy() } catch (e) { } } else if (!settled) { settle(false) } else if (P) { P.lost = true; P.sig = ""; renderPhone() } });
+}
 $("phLeave").addEventListener("click", () => {
-  if (P) { if (P.unsub) P.unsub(); FB.F.deleteDoc(P.pref).catch(() => { }) }
+  if (P) { try { P.conn && P.conn.close() } catch (e) { } try { P.peer.destroy() } catch (e) { } }
   P = null; show("setup");
 });
 function renderPhone() {
-  if (!P) return; const st = P.st, b = $("phBody"), k = ME && ME.uid;
+  if (!P) return; const st = P.st, b = $("phBody"), k = myKey;
   const me = st && Array.isArray(st.players) ? st.players.find(p => p.k === k) : null;
   $("phScore").textContent = (me ? me.s : 0) + " pts";
   const msg = (t, s) => `<div class="pmsg">${esc(t)}${s ? `<small>${esc(s)}</small>` : ""}</div>`;
+  if (P.lost) { b.innerHTML = msg("Lost connection to the TV.", "Tap Reconnect. Your score is kept.") + '<button class="start" id="reconn">Reconnect</button>'; P.sig = ""; return }
   if (!st) { b.innerHTML = msg("Connecting…", "Looking for the game on the TV."); return }
   if (st.phase === "closed") { b.innerHTML = msg("The host closed the game.", "Tap Leave to join another."); return }
   if (st.phase === "lobby") { const n = (st.players || []).length; b.innerHTML = msg("You're in!", `Watch the TV. ${n} player${n === 1 ? "" : "s"} so far.`); return }
@@ -355,9 +371,10 @@ function renderPhone() {
   }
 }
 $("phBody").addEventListener("click", e => {
-  const btn = e.target.closest(".pb[data-c]"); if (!btn || !P || !P.st || P.st.phase !== "answer") return;
+  if (e.target.id === "reconn" && P) { const { name, code } = P; e.target.disabled = true; e.target.textContent = "Reconnecting…"; phoneConnect(name, code, ok => { if (!ok && P) { P.lost = true; renderPhone() } }); return }
+  const btn = e.target.closest(".pb[data-c]"); if (!btn || !P || !P.st || P.st.phase !== "answer" || !P.conn) return;
   const c = +btn.dataset.c, st = P.st; P.mine[st.rid + ":" + st.i] = c;
-  FB.F.updateDoc(P.pref, { ans: { rid: st.rid, i: st.i, c } }).catch(() => { delete P.mine[st.rid + ":" + st.i]; renderPhone() });
+  try { P.conn.send({ t: "ans", k: myKey, rid: st.rid, i: st.i, c }) } catch (err) { delete P.mine[st.rid + ":" + st.i] }
   renderPhone();
 });
 

@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Limelight&family=DM+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
 </head>
 <body>
 <div class="bg" aria-hidden="true"><svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
@@ -29,56 +28,16 @@
 </svg></div>
 <div class="wrap">
  <header class="marquee"><div class="bulbs" id="bulbs"></div><h1>Reel Smart</h1><p>Admin</p></header>
-
- <section class="stage" id="signin">
-  <div id="setupBanner"></div>
-  <div class="meta"><span>Admin sign-in</span><a class="ghost exit btnlink" href="./">Back to the game</a></div>
-  <h2>Sign in</h2>
-  <form id="loginForm">
-   <label for="email">Email</label><input type="email" id="email" autocomplete="username" required>
-   <label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password" required>
-   <button class="start" type="submit" id="loginBtn">Sign in</button>
-  </form>
-  <form id="totpForm" class="hide">
-   <label for="totp">6-digit code from your Authenticator app</label>
-   <input type="text" id="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required style="width:100%;letter-spacing:.3em;font-weight:800">
-   <button class="start" type="submit" id="totpBtn">Verify</button>
-  </form>
-  <p class="status" id="loginMsg" aria-live="polite"></p>
-  <button class="ghost hide" id="resetBtn" style="margin-top:8px">Email me a password reset link</button>
- </section>
-
- <section class="stage hide" id="verify">
-  <div class="meta"><span>Step 1 of 2</span><button class="ghost exit" data-signout>Sign out</button></div>
-  <h2>Verify your email</h2>
-  <p>Authenticator sign-in needs a verified email. Send the link, click it in your inbox, then sign in again.</p>
-  <button class="start" id="sendVerify">Send verification email</button>
-  <p class="status" id="verifyMsg" aria-live="polite"></p>
- </section>
-
- <section class="stage hide" id="enroll">
-  <div class="meta"><span>Step 2 of 2</span><button class="ghost exit" data-signout>Sign out</button></div>
-  <h2>Set up your Authenticator</h2>
-  <p>Scan this with Google Authenticator, Microsoft Authenticator, 1Password or similar. Or type the key in by hand.</p>
-  <div class="qrbox"><div class="qr" id="qr"></div><div><div class="note" style="margin:0 0 4px">Setup key</div><div class="secret" id="secretKey"></div>
-   <p class="status"><a id="otpLink" href="#">Open in an Authenticator app on this phone</a></p></div></div>
-  <form id="enrollForm"><label for="enrollCode">Enter the 6-digit code it shows</label>
-   <input type="text" id="enrollCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required style="width:100%;letter-spacing:.3em;font-weight:800">
-   <button class="start" type="submit" id="enrollBtn">Turn on Authenticator</button></form>
-  <p class="status" id="enrollMsg" aria-live="polite"></p>
- </section>
-
- <section class="stage hide" id="tools">
-  <div class="meta"><span id="who"></span><span class="row" style="gap:8px"><a class="ghost exit btnlink" href="./">Back to the game</a><button class="ghost exit" data-signout>Sign out</button></span></div>
+ <section class="stage">
+  <div class="meta"><span>Admin</span><a class="ghost exit btnlink" href="./">Back to the game</a></div>
   <div class="tabs" id="tabPick">
    <button type="button" class="pill" data-v="add" aria-pressed="true">Add a new clip</button>
-   <button type="button" class="pill" data-v="bulk" aria-pressed="false">Import clips</button>
-   <button type="button" class="pill" data-v="attach" aria-pressed="false">Built-in questions</button>
-   <button type="button" class="pill" data-v="mine" aria-pressed="false">Your clips</button>
+   <button type="button" class="pill" data-v="have" aria-pressed="false">Clips in the game</button>
   </div>
 
   <div id="tab-add">
    <h2>Add a new clip</h2>
+   <p class="lockmsg">Changes are saved in GitHub, so they're protected by your GitHub sign-in and its Authenticator code. Nobody else can change the game.</p>
    <label>Video clip</label>
    <div class="row"><label class="up" style="margin:0">Choose a clip<input type="file" accept="video/*" id="aFile"></label><span id="aFileName" class="status" style="margin:0"></span></div>
    <video id="aPrev" controls playsinline class="hide" style="width:100%;max-height:260px;background:#000;border-radius:10px;margin-top:10px"></video>
@@ -91,31 +50,26 @@
     <input type="text" id="dis0" maxlength="80" placeholder="Wrong answer 1"><input type="text" id="dis1" maxlength="80" placeholder="Wrong answer 2"><input type="text" id="dis2" maxlength="80" placeholder="Wrong answer 3"></div></div>
    <div id="hardCards"></div>
    <button class="ghost" id="addHard" style="margin-top:12px">+ Add a Clip challenge question</button>
-   <button class="start" id="aSave">Upload and save</button>
-   <div class="progress hide" id="aProg"><div></div></div>
+   <button class="start" id="build">Get it ready for GitHub</button>
    <p class="status" id="aStatus" aria-live="polite"></p>
+
+   <div id="steps" class="hide">
+    <h3>Three steps to publish it</h3>
+    <div class="rcard"><h4>1. Upload the clip</h4>
+     <p style="margin:0 0 8px">Name the file <b class="secret" id="fname"></b> and drop it into the <b>clips</b> folder on GitHub.</p>
+     <a class="btnlink up" id="upLink" target="_blank" rel="noopener">Open the clips upload page</a></div>
+    <div class="rcard"><h4>2. Add the questions</h4>
+     <p style="margin:0 0 8px">Copy this and open <b>data/custom.json</b>. If the file is just <code>[]</code>, put this between the brackets. Otherwise type a comma after the last <code>}</code> and paste this before the final <code>]</code>.</p>
+     <pre class="secret" id="json" style="white-space:pre-wrap;max-height:260px;overflow:auto"></pre>
+     <div class="row"><button id="copy">Copy</button><a class="btnlink up ghost" id="editLink" target="_blank" rel="noopener">Open custom.json to edit</a></div></div>
+    <div class="rcard"><h4>3. Commit</h4><p style="margin:0">Click <b>Commit changes</b> on GitHub. The site updates in about a minute.</p></div>
+   </div>
   </div>
 
-  <div id="tab-bulk" class="hide">
-   <h2>Import clips</h2>
-   <p>Pick several clips at once. Files named after a movie in the built-in "Name that scene" list (like <i>Fargo.mp4</i>) are matched automatically. Anything that doesn't match is listed so you can add it under <b>Add a new clip</b>.</p>
-   <label class="up" style="margin:0">Choose clips<input type="file" accept="video/*" id="bFiles" multiple></label>
-   <div class="progress hide" id="bProg"><div></div></div>
-   <p class="status" id="bStatus" aria-live="polite"></p>
-   <div id="bList"></div>
-  </div>
-
-  <div id="tab-attach" class="hide">
-   <h2>Built-in questions</h2>
-   <p>Attach a clip to any built-in question. "Name that scene" and "Clip challenge" questions only appear in games once their clip is attached.</p>
-   <input type="search" id="clipSearch" placeholder="Search questions or answers" aria-label="Search questions" style="width:100%;margin-top:6px">
-   <p class="status" id="cStatus" aria-live="polite"></p>
-   <div id="clipList"></div>
-  </div>
-
-  <div id="tab-mine" class="hide">
-   <h2>Your clips</h2>
-   <div id="aList" class="alist"><p class="note">None yet.</p></div>
+  <div id="tab-have" class="hide">
+   <h2>Clips in the game</h2>
+   <p>Built-in questions with a clip attached, plus clips you've added. To attach a clip to another built-in question, upload it to <b>clips</b> and add a line to <b>data/clips.json</b> (or just send it to Claude).</p>
+   <div id="haveList" class="alist"><p class="note">Loading…</p></div>
   </div>
  </section>
 </div>
