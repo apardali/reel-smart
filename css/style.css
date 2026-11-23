@@ -605,3 +605,13 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 .opt.right{background:linear-gradient(180deg,#36de88,#13894a)}.opt.wrong{background:linear-gradient(180deg,#f0656c,#a3232b)}
 .score.on{background:linear-gradient(180deg,#ffe58f,#e6a52a)}
 @media (min-aspect-ratio:4/3) and (min-width:900px){#setup.stage{background:none;box-shadow:none;border:0}}
+
+/* ===== TV title: words twice as large, laid over the original frame ===== */
+.lg-words{display:none}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .lg-words{display:block;position:absolute;left:50%;top:44%;width:calc(var(--u)*136);height:auto;transform:translate(-50%,-50%);z-index:2;pointer-events:none}
+ body.ingame .lg-words{width:calc(var(--u)*70)}
+}
+/* selected mode card: gold text (phone and TV) */
+#setup .mode[aria-pressed=true],#setup .mode[aria-pressed=true] small{color:#ffd45a}
+#setup .mode[aria-pressed=true] small{color:#ffe08a}
