@@ -247,3 +247,35 @@ h2{font:400 clamp(24px,4vw,34px)/1.15 "Russo One","Arial Black",sans-serif;lette
 @media (min-width:1200px) and (min-aspect-ratio:3/2){
  #setup,#lobby,#join,#phone{grid-column:1/-1;width:100%;max-width:1280px;justify-self:center}
 }
+
+/* ===== Exact background artwork (img/background.jpg) ===== */
+.bg.photo{position:fixed;inset:0;z-index:0;background:#060b25;overflow:hidden;opacity:1}
+.bg.photo img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.bg-main{object-fit:cover;object-position:50% 0}
+.bg-blur{display:none}
+/* The logo is part of the artwork: keep the text for screen readers, leave room for the art. */
+.marquee{height:max(55.3vw,31.1vh);padding:0;margin:0}
+.marquee .logo,.marquee p{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{padding-top:0}
+.stage{margin-top:0}
+/* Landscape screens (laptops, TVs): whole artwork centred, the same image blurred behind to fill the sides. */
+@media (min-aspect-ratio:941/1672){
+ .bg-main{object-fit:contain;object-position:50% 0}
+ .bg-blur{display:block;object-fit:cover;filter:blur(30px) brightness(.65) saturate(1.2);transform:scale(1.12)}
+ .marquee{height:31.1vh}
+}
+@media (min-width:1200px) and (min-aspect-ratio:3/2){
+ .wrap{grid-template-areas:"mq mq" "st bd";padding-top:0}
+ .screen video{max-height:calc(69vh - 170px)}
+ .opt{min-height:clamp(56px,6.4vh,92px)}
+ .board{margin-top:0}
+}
+@media (min-aspect-ratio:941/1672){
+ .bg-main{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%)}
+ .bg-blur{filter:blur(34px) brightness(.5) saturate(1.15)}
+}
+@media (min-width:1200px) and (min-aspect-ratio:3/2){.screen video{max-height:calc(69vh - 200px)}}
+@media (min-aspect-ratio:941/1672){
+ .bg.photo .bg-main{left:50%;width:calc(100vh * 941 / 1672);transform:translateX(-50%);object-fit:cover;object-position:50% 0;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%)}
+}
