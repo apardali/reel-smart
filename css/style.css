@@ -615,3 +615,4 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 /* selected mode card: gold text (phone and TV) */
 #setup .mode[aria-pressed=true],#setup .mode[aria-pressed=true] small{color:#ffd45a}
 #setup .mode[aria-pressed=true] small{color:#ffe08a}
+#setup h2{font-size:min(6vw,38px)}
