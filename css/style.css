@@ -616,3 +616,15 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 #setup .mode[aria-pressed=true],#setup .mode[aria-pressed=true] small{color:#ffd45a}
 #setup .mode[aria-pressed=true] small{color:#ffe08a}
 #setup h2{font-size:min(6vw,38px)}
+
+/* ===== TV lobby: bigger labels, Start button styled like Open the lobby ===== */
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ #lobby .meta{font-size:calc(var(--u)*2.6);color:#ffd45a;font-weight:800}
+ #lobby .meta>span{font:900 calc(var(--u)*3.2)/1 "Playfair Display",Georgia,serif;color:#ffd45a;text-shadow:0 0 calc(var(--u)*.8) rgba(255,190,60,.45)}
+ #lobby .exit,#play .exit{min-height:calc(var(--u)*5);font-size:calc(var(--u)*2.2);padding:0 calc(var(--u)*2.8);border-width:calc(var(--u)*.25)}
+ #lobby .codebox .note{font-size:calc(var(--u)*2.2);color:#e8eeff}
+ #lobby #lobbyNote{font-size:calc(var(--u)*2.6);color:#fff;font-weight:600;margin:calc(var(--u)*1.2) 0}
+ #lobby .start{display:block;width:calc(var(--u)*58);max-width:100%;margin:calc(var(--u)*1.8) auto 0;min-height:calc(var(--u)*8);font:700 calc(var(--u)*3.8)/1 Roboto,sans-serif;border-radius:calc(var(--u)*4);
+  background:linear-gradient(180deg,#fff0a8 0%,#ffd45a 30%,#f3b632 62%,#e9a628 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 calc(var(--u)*.5) 0 #a8700f,0 0 calc(var(--u)*2.6) rgba(255,200,70,.65)}
+ #lobby .start:disabled{opacity:.6;filter:saturate(.7)}
+}
