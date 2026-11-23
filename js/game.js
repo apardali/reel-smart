@@ -5,7 +5,8 @@ Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
 const BASE = Q.length;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-const T = 20, LET = ["A", "B", "C", "D"];
+const BASE_T = 20, LET = ["A", "B", "C", "D"];
+let T = BASE_T; // seconds to answer; clip questions get longer (see beginAnswers)
 const SCREENS = ["setup", "lobby", "join", "phone", "play", "end"];
 let mode = "host", cat = "mix", per = 10;
 const show = id => {
@@ -104,6 +105,7 @@ function warn(t) { const w = $("setupWarn"); w.textContent = t; w.classList.remo
 let autoQ = null;
 let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = false;
 function paintQuestion(q, label, turnText, tiles) {
+  T = BASE_T;
   $("qnum").textContent = label; $("pts").textContent = "";
   $("turn").textContent = turnText; $("cat").textContent = q.c; $("qtext").textContent = q.q;
   $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(o)}</span></button>`).join("");
@@ -129,7 +131,11 @@ function startTimer(onTick, onEnd) {
 vid.addEventListener("ended", () => { if (!$("play").classList.contains("hide")) beginAnswers() });
 vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = "That clip wouldn't play, so here's the question without it."; $("screen").classList.add("hide"); beginAnswers() } });
 $("revealBtn").addEventListener("click", () => { vid.pause(); beginAnswers() });
-function beginAnswers() { if (answering) return; answering = true; if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
+function beginAnswers() {
+  if (answering) return; answering = true;
+  // Clip questions: enough time to watch the rest of the clip, plus 10 seconds (20–75 s).
+  if (!$("screen").classList.contains("hide") && isFinite(vid.duration) && vid.duration > 0)
+    T = Math.min(75, Math.max(BASE_T, Math.ceil(vid.duration - vid.currentTime) + 10)); if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
 
 /* ---------- one-screen mode ---------- */
 function startLocal() {
