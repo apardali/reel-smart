@@ -1,6 +1,6 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795553365";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795563051";
 import { music } from "./music.js?v=1795562294";
-import { Q } from "./questions.js?v=1795472675";
+import { Q } from "./questions.js?v=1795563051";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
@@ -121,7 +121,19 @@ function buildDeck(n) {
   const pool0 = shuffle(Q.filter(q => ok(q) && (cat === "all" || q.t === cat)));
   const seen = new Set(), first = [], rest = [];
   for (const q of pool0) { const k = q.clip || q.e || q.id; (seen.has(k) ? rest : first).push(q); seen.add(k) }
-  return [...first, ...rest].slice(0, n).map(q => { if (q.o.length < 3) return q; const idx = shuffle(q.o.map((_, i) => i)); return { ...q, o: idx.map(i => q.o[i]), a: idx.indexOf(q.a) } });
+  // Mix it up: never the same kind of question twice in a row, and avoid the same franchise back to back.
+  // Kinds are picked at random, weighted by the square root of how many questions they have, so big kinds don't dominate.
+  const groups = new Map(); for (const q of first) { if (!groups.has(q.c)) groups.set(q.c, []); groups.get(q.c).push(q) }
+  const fr = q => q.f || q.c, out = []; let lastC = null, lastF = null;
+  while (out.length < n && groups.size) {
+    let cands = [...groups.entries()].filter(([c]) => c !== lastC); if (!cands.length) cands = [...groups.entries()];
+    const w = cands.map(([, a]) => Math.sqrt(a.length)); let r = Math.random() * w.reduce((s, x) => s + x, 0), k = 0;
+    while (k < w.length - 1 && r > w[k]) { r -= w[k]; k++ }
+    const [c, arr] = cands[k]; let j = arr.findIndex(q => fr(q) !== lastF); if (j < 0) j = 0;
+    const q = arr.splice(j, 1)[0]; if (!arr.length) groups.delete(c);
+    out.push(q); lastC = q.c; lastF = fr(q);
+  }
+  return [...out, ...rest].slice(0, n).map(q => { if (q.o.length < 3) return q; const idx = shuffle(q.o.map((_, i) => i)); return { ...q, o: idx.map(i => q.o[i]), a: idx.indexOf(q.a) } });
 }
 function warn(t) { const w = $("setupWarn"); w.textContent = t; w.classList.remove("hide") }
 
