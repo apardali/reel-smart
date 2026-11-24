@@ -1,4 +1,4 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795542303";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795553365";
 import { music } from "./music.js?v=1795547571";
 import { Q } from "./questions.js?v=1795472675";
 
@@ -10,7 +10,7 @@ const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;"
 const BASE_T = 20, LET = ["A", "B", "C", "D"];
 let T = BASE_T; // seconds to answer; clip questions get longer (see beginAnswers)
 const SCREENS = ["setup", "lobby", "join", "phone", "play", "end"];
-let mode = "host", cat = "mix", per = 10;
+let mode = "host", cat = "all", per = 10;
 const show = id => {
   music.want(id !== "join" && id !== "phone");
   SCREENS.forEach(s => $(s).classList.toggle("hide", s !== id));
@@ -48,8 +48,6 @@ function parseClip(v) {
 const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "Name that scene") };
 function updateCount() {
   const n = Object.keys(clips).length;
-  const sceneOk = !clipsReady || Q.some(q => q.c === "Name that scene" && hasClip(q)), sp = document.querySelector('#catPick [data-v="clips"]');
-  if (sp) { sp.classList.toggle("hide", !sceneOk); if (!sceneOk && cat === "clips") document.querySelector('#catPick [data-v="mix"]').click() }
   $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");
 }
 function rebuildQ() {
@@ -120,7 +118,7 @@ function applyMode() {
 function buildDeck(n) {
   const needsClip = q => q.hard || q.c === "Name that scene";
   const ok = q => !needsClip(q) || hasClip(q);
-  const pool0 = shuffle(Q.filter(q => ok(q) && (cat === "all" ? true : cat === "hard" ? q.hard : !q.hard && (cat === "mix" || (cat === "clips" ? hasClip(q) : q.t === cat)))));
+  const pool0 = shuffle(Q.filter(q => ok(q) && (cat === "all" || q.t === cat)));
   const seen = new Set(), first = [], rest = [];
   for (const q of pool0) { const k = q.clip || q.e || q.id; (seen.has(k) ? rest : first).push(q); seen.add(k) }
   return [...first, ...rest].slice(0, n).map(q => { if (q.o.length < 3) return q; const idx = shuffle(q.o.map((_, i) => i)); return { ...q, o: idx.map(i => q.o[i]), a: idx.indexOf(q.a) } });
