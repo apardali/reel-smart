@@ -1,5 +1,5 @@
 import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795553365";
-import { music } from "./music.js?v=1795547571";
+import { music } from "./music.js?v=1795562233";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);

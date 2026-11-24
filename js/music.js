@@ -4,7 +4,7 @@
 // "funk" = the earlier funky game-show groove.
 const SONG = "greek";
 const BPM = SONG === "greek" ? 122 : 108, STEP = 60 / BPM / 4, SWING = SONG === "greek" ? 0 : 0.16;
-const VOL = 0.006;
+const VOL = 0.016;
 let ctx = null, master = null, bus = null, noiseBuf = null;
 let timer = null, nextT = 0, step = 0;
 let wanted = false, ducked = false, muted = false;
