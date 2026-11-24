@@ -39,13 +39,13 @@ const G_MEL = [
   [[0, 65, 2], [2, 67, 1], [3, 69, 1], [4, 70, 4], [8, 69, 2], [10, 67, 2], [12, 65, 2], [14, 64, 2]],
   [[0, 69, 2], [2, 70, 2], [4, 73, 2], [6, 74, 2], [8, 76, 6], [14, 73, 2]]
 ];
-function bouzouki(t, m, len) {
+function bouzouki(t, m, len, lvl = 1) {
   const f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = "peaking"; f.frequency.value = 2600; f.gain.value = 9; f.Q.value = 1.2;
   const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 300;
   hp.connect(f); f.connect(g); g.connect(bus); g.gain.value = 1;
   const picks = len >= 3 * STEP ? Math.floor(len / (STEP / 2)) : 1, dt = len / picks; // tremolo on long notes
   for (let k = 0; k < picks; k++) {
-    const tt = t + k * dt, v = k ? .055 : .08;
+    const tt = t + k * dt, v = (k ? .055 : .08) * lvl;
     for (const [oct, det] of [[0, -4], [0, 4], [12, 0]]) {
       const o = ctx.createOscillator(), e = ctx.createGain(); o.type = "sawtooth"; o.frequency.value = hz(m + oct); o.detune.value = det;
       e.gain.setValueAtTime(0.0001, tt); e.gain.exponentialRampToValueAtTime(oct ? v * .5 : v, tt + .004); e.gain.exponentialRampToValueAtTime(0.0001, tt + Math.max(dt, .09) + .12);
@@ -68,7 +68,22 @@ function scheduleGreek(s, t) {
   if (bar === 7 && i >= 12) snare(t, .5 + (i - 12) * .15); // fill into the next round
   for (const [st, off] of G_BASS) if (st === i) bass(t, G_ROOT[bar] + off, STEP * 1.5);
   if (i % 4 === 2) pluckChord(t, G_CH[bar]);
-  if (loop % 2 === 1 || bar >= 4) for (const [st, m, l] of G_MEL[bar]) if (st === i) bouzouki(t, m, l * STEP); // melody comes in on the second half
+  // Second bouzouki: broken-chord picking under everything (lower octave, softer)
+  const arp = G_CH[bar], pat = [0, 1, 2, 1];
+  if (i % 2 === 0) bouzouki(t, arp[pat[(i / 2) % 4]] - 12, STEP * 1.6, .55);
+  // Lead bouzouki: the melody every time round; on the second round a harmony bouzouki joins a third below
+  for (const [st, m, l] of G_MEL[bar]) if (st === i) {
+    bouzouki(t, m, l * STEP, 1.25);
+    if (loop % 2 === 1) bouzouki(t, harm(m), l * STEP, .7);
+  }
+  // Quick bouzouki run into the next bar at the end of every other bar
+  if (bar % 2 === 1 && i === 15 && bar !== 7) { const r = [74, 73, 70, 69]; r.forEach((n, k) => bouzouki(t + k * STEP / 4, n, STEP / 4, .8)) }
+}
+// Diatonic third below in D harmonic minor
+const DHM = [2, 4, 5, 7, 9, 10, 1];
+function harm(m) {
+  for (let d = 3; d <= 4; d++) { const n = m - d; if (DHM.includes(((n % 12) + 12) % 12)) return n }
+  return m - 3;
 }
 function init() {
   if (ctx) return true;
