@@ -185,9 +185,17 @@ function answer(i) {
   if (i === q.a) { const pts = 100 + Math.round(Math.max(0, left) / T * 100); p.s += pts; $("result").textContent = t("Correct! +{n} points", { n: pts }); $("pts").textContent = `+${pts}` }
   else $("result").textContent = (i < 0 ? t("Time's up.") : t("Not quite.")) + " " + t("It was {a}.", { a: t(q.o[q.a]) });
   renderBoard(idx % players.length);
-  const nb = $("nextBtn"); nb.textContent = idx + 1 < deck.length ? t("Next question") : t("See the results"); nb.classList.remove("hide"); nb.focus();
+  autoAdvance();
 }
-function next() { stopVideo(); if (mode === "host") { hostNext(); return } idx++; if (idx < deck.length) ask(); else finish() }
+// After the right answer is shown, move on by itself after a few seconds (the button skips the wait).
+const NEXT_WAIT = 4;
+function autoAdvance() {
+  const nb = $("nextBtn"); let n = NEXT_WAIT;
+  const lab = () => nb.textContent = (idx + 1 < deck.length ? t("Next question") : t("See the results")) + ` (${n})`;
+  lab(); nb.classList.remove("hide"); if (mode === "local") nb.focus();
+  clearTimeout(autoNext); const tick = () => { n--; if (n <= 0) { next(); return } lab(); autoNext = setTimeout(tick, 1000) }; autoNext = setTimeout(tick, 1000);
+}
+function next() { clearTimeout(autoNext); stopVideo(); if (mode === "host") { hostNext(); return } idx++; if (idx < deck.length) ask(); else finish() }
 function finish() {
   stopVideo(); show("end"); const r = [...players].sort((a, b) => b.s - a.s);
   const tie = r.length > 1 && r[0].s === r[1].s;
@@ -311,8 +319,7 @@ function hostReveal() {
   const right = Object.values(H.gains).filter(x => x.r).length;
   $("result").textContent = t("It's {l}: {a}. {n} got it right.", { l: LET[q.a], a: t(q.o[q.a]), n: right });
   renderHostBoard(true); hostWrite();
-  const nb = $("nextBtn"); let n = 10; const lab = () => nb.textContent = (idx + 1 < deck.length ? t("Next question") : t("See the results")) + ` (${n})`; lab(); nb.classList.remove("hide");
-  clearTimeout(autoNext); const tick = () => { n--; if (n <= 0) { next(); return } lab(); autoNext = setTimeout(tick, 1000) }; autoNext = setTimeout(tick, 1000);
+  autoAdvance();
 }
 function hostNext() { clearTimeout(autoNext); idx++; if (idx < deck.length) hostAsk(); else hostEnd() }
 function hostEnd() {
