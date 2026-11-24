@@ -670,3 +670,12 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 .howto .howline{display:block}
 @media (min-aspect-ratio:4/3) and (min-width:900px){ .qr{width:calc(var(--u)*34)} }
 @media not all and (min-aspect-ratio:4/3) and (min-width:900px){ .howto .joinurl{font-size:clamp(18px,5.6vw,30px);word-break:normal;overflow-wrap:anywhere} }
+/* music on/off */
+.footR{display:flex;gap:10px;align-items:center}
+.mutebtn{display:inline-flex;align-items:center;justify-content:center;padding:0 12px;min-width:44px}
+.mutebtn .mi{display:inline-flex}
+.mutebtn[aria-pressed="true"]{opacity:.75}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .setfoot .footR{grid-column:5;grid-row:1;justify-self:end;gap:calc(var(--u)*1)}
+ .mutebtn{min-width:calc(var(--u)*5);padding:0 calc(var(--u)*1.2)}
+}

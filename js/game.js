@@ -1,4 +1,5 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795539392";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795542303";
+import { music } from "./music.js?v=1795542303";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -11,6 +12,7 @@ let T = BASE_T; // seconds to answer; clip questions get longer (see beginAnswer
 const SCREENS = ["setup", "lobby", "join", "phone", "play", "end"];
 let mode = "host", cat = "mix", per = 10;
 const show = id => {
+  music.want(id !== "join" && id !== "phone");
   SCREENS.forEach(s => $(s).classList.toggle("hide", s !== id));
   document.body.classList.toggle("ingame", id === "play" || id === "lobby");
   $("board").classList.toggle("hide", !(id === "play" || id === "end" || (id === "setup" && mode === "local")));
@@ -152,6 +154,9 @@ vid.addEventListener("timeupdate", () => {
   const d = vid.duration, at = isFinite(d) && d > 0 ? Math.min(ANSWERS_AT, Math.max(1, d - 1.5)) : ANSWERS_AT;
   if (vid.currentTime >= at) beginAnswers();
 });
+// Background music pauses while a clip plays.
+vid.addEventListener("playing", () => music.duck(true));
+["pause", "ended", "emptied"].forEach(e => vid.addEventListener(e, () => music.duck(false)));
 vid.addEventListener("ended", () => { if (!$("play").classList.contains("hide")) beginAnswers() });
 vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = t("That clip wouldn't play, so here's the question without it."); $("screen").classList.add("hide"); beginAnswers() } });
 $("revealBtn").addEventListener("click", () => { vid.pause(); beginAnswers() });
@@ -424,3 +429,14 @@ renderChips(); applyMode(); updateCount();
   const jc = (new URLSearchParams(location.search).get("join") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
   if (jc) { $("toJoin").click(); $("jcode").value = jc; if ($("jname").value) $("joinBtn").focus(); else $("jname").focus() }
 }
+/* ---------- music on/off ---------- */
+const SPK = '<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3z"/>';
+function paintMute(m) {
+  document.querySelectorAll(".mutebtn").forEach(b => {
+    b.querySelector(".mi").innerHTML = SPK + (m ? '<path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' : '<path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>') + "</svg>";
+    b.setAttribute("aria-pressed", m ? "true" : "false"); b.setAttribute("aria-label", m ? t("Turn music on") : t("Mute music"));
+  });
+}
+document.querySelectorAll(".mutebtn").forEach(b => b.addEventListener("click", () => music.toggle()));
+music.onChange(paintMute); paintMute(music.isMuted());
+window.addEventListener("keydown", e => { if ((e.key === "m" || e.key === "M") && !e.target.closest("input,textarea,select")) music.toggle() });

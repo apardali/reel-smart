@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Russo+One&family=Playfair+Display:wght@800;900&family=DM+Sans:wght@400;600;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>.lg-words,.lg-art,.bg-wide{display:none}</style>
-<link rel="stylesheet" href="css/style.css?v=1795539411">
+<link rel="stylesheet" href="css/style.css?v=1795542303">
 </head>
 <body>
 <div class="bg photo" aria-hidden="true"><img class="bg-wide" src="img/background-tv.jpg?v=1795417697" alt=""><img class="bg-blur" src="img/background.jpg" alt=""><img class="bg-main" src="img/background.jpg" alt=""></div>
@@ -64,12 +64,12 @@
   <div class="tvnote"><p>Players join on their phones with the room code shown on the TV.<br>Everyone answers every question. Faster right answers score more.</p></div>
   <p class="status" id="clipCount" style="margin-top:12px">Loading clips…</p>
   <p class="note" id="modeNote"></p>
-  <div class="row footrow" style="justify-content:space-between;margin-top:12px"><label class="langwrap"><span class="sr">Language</span><select id="langPick" aria-label="Language"></select></label><a class="ghost exit btnlink" href="admin.html">Admin</a></div>
+  <div class="row footrow" style="justify-content:space-between;margin-top:12px"><label class="langwrap"><span class="sr">Language</span><select id="langPick" aria-label="Language"></select></label><span class="footR"><button class="ghost exit mutebtn" type="button" aria-label="Mute music" title="Music on/off (M)"><span class="mi"></span></button><a class="ghost exit btnlink" href="admin.html">Admin</a></span></div>
   </div>
  </section>
 
  <section class="stage hide" id="lobby">
-  <div class="meta"><span>Lobby</span><button class="ghost exit" id="lobbyExit">Exit</button></div>
+  <div class="meta"><span>Lobby</span><span class="row" style="gap:12px"><button class="ghost exit mutebtn" type="button" aria-label="Mute music" title="Music on/off (M)"><span class="mi"></span></button><button class="ghost exit" id="lobbyExit">Exit</button></span></div>
   <div class="codebox">
    <div class="qrwrap"><div class="qr" id="joinQR" aria-label="QR code to join"></div><div class="qrcap">Scan to join</div></div>
    <div class="codeinfo"><div class="note" style="margin:0 0 4px">Room code</div><div class="code" id="roomCode">----</div>
@@ -99,7 +99,7 @@
  </section>
 
  <section class="stage hide" id="play">
-  <div class="meta"><span id="qnum"></span><span class="row" style="gap:12px"><span id="pts"></span><button class="ghost exit" id="exitBtn">Exit</button></span></div>
+  <div class="meta"><span id="qnum"></span><span class="row" style="gap:12px"><span id="pts"></span><button class="ghost exit mutebtn" type="button" aria-label="Mute music" title="Music on/off (M)"><span class="mi"></span></button><button class="ghost exit" id="exitBtn">Exit</button></span></div>
   <div class="pgrid">
    <div>
     <div class="turn" id="turn"></div>
@@ -130,6 +130,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
 <script src="js/vendor/qrcode.js?v=1795539392"></script>
-<script type="module" src="js/game.js?v=1795539392"></script>
+<script type="module" src="js/game.js?v=1795542303"></script>
 </body>
 </html>
