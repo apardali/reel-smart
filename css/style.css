@@ -652,3 +652,21 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
  #setup .setfoot #setupWarn{grid-column:3}
  .setfoot .footrow>a{grid-column:5;grid-row:1;justify-self:end}
 }
+/* lobby: QR code + larger join address */
+.codebox{display:flex;align-items:center;justify-content:center;gap:clamp(16px,3vw,48px);flex-wrap:wrap}
+.codeinfo{flex:1 1 280px;min-width:0}
+.qrwrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.qr{width:clamp(150px,42vw,220px);aspect-ratio:1;background:#fff;border-radius:14px;padding:8px;box-shadow:0 0 0 3px #ffd45a,0 0 24px rgba(255,212,90,.35)}
+.qr svg{display:block;width:100%;height:100%}
+.qrcap{font-weight:800;color:#ffd45a;font-size:clamp(14px,1.3vw,20px)}
+.howto .joinurl{display:block;font-size:1.7em;line-height:1.15;color:#ffd45a;margin:.25em 0;word-break:break-all;letter-spacing:.01em}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ .codebox{flex-wrap:nowrap;gap:calc(var(--u)*5)}
+ .qr{width:calc(var(--u)*30);border-radius:calc(var(--u)*1.6);padding:calc(var(--u)*1);box-shadow:0 0 0 calc(var(--u)*.35) #ffd45a,0 0 calc(var(--u)*3) rgba(255,212,90,.35)}
+ .qrcap{font-size:calc(var(--u)*2.4)}
+ .howto{font-size:calc(var(--u)*2.6)}
+ .howto .joinurl{font-size:calc(var(--u)*5);word-break:normal;overflow-wrap:anywhere}
+}
+.howto .howline{display:block}
+@media (min-aspect-ratio:4/3) and (min-width:900px){ .qr{width:calc(var(--u)*34)} }
+@media not all and (min-aspect-ratio:4/3) and (min-width:900px){ .howto .joinurl{font-size:clamp(18px,5.6vw,30px);word-break:normal;overflow-wrap:anywhere} }

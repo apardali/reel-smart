@@ -1,4 +1,4 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795489267";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795539392";
 import { Q } from "./questions.js?v=1795472675";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -18,7 +18,20 @@ const show = id => {
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a };
 const vid = $("vid");
 const SITE = location.host + location.pathname.replace(/index\.html$/, "");
-function renderHowto() { $("howto").innerHTML = esc(t("On your phone, go to {url}, tap {join} and enter this code.", { url: "\u0000", join: "\u0001" })).replace("\u0000", `<b>${esc(SITE)}</b>`).replace("\u0001", `<b>${esc(t("Join a game"))}</b>`) }
+function renderHowto() {
+  $("howto").innerHTML = `<span class="howline">${esc(t("On your phone, go to"))}</span><b class="joinurl">${esc(SITE.replace(/\/$/, ""))}</b>` +
+    `<span class="howline">${esc(t("Then tap {join} and enter this code.", { join: "\u0001" })).replace("\u0001", `<b>${esc(t("Join a game"))}</b>`)}</span>`;
+}
+// QR code that opens this site's join screen with the room code filled in.
+function joinLink(code) {
+  const u = new URL(location.href); u.hash = ""; u.pathname = u.pathname.replace(/index\.html$/, "");
+  u.searchParams.set("join", code); return u.toString();
+}
+function renderQR(code) {
+  const el = $("joinQR"); if (!el || typeof qrcode !== "function") return;
+  const qr = qrcode(0, "M"); qr.addData(joinLink(code)); qr.make();
+  el.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+}
 
 /* ---------- clips + custom questions (files in the repo) ---------- */
 let clips = {}, CUSTOM = [], clipsReady = false;
@@ -217,7 +230,7 @@ function openLobby() {
     peer.on("open", () => {
       opened = true; btn.disabled = false; btn.textContent = t("Open the lobby");
       H = { code, peer, conns: new Map(), phase: "lobby", rid: "", i: 0, players: new Map(), answers: {}, deadline: 0, gains: {} };
-      $("roomCode").textContent = code; show("lobby"); renderLobby();
+      $("roomCode").textContent = code; renderQR(code); show("lobby"); renderLobby();
     });
     peer.on("connection", conn => {
       conn.on("data", d => onPhoneMsg(conn, d));
@@ -406,3 +419,8 @@ lp.value = getLang();
 lp.addEventListener("change", () => { setLang(lp.value); renderHowto(); applyMode(); updateCount(); if (H) hostWrite() });
 applyStatic(); renderHowto();
 renderChips(); applyMode(); updateCount();
+// Arrived from the lobby QR code: open the join screen with the room code filled in.
+{
+  const jc = (new URLSearchParams(location.search).get("join") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  if (jc) { $("toJoin").click(); $("jcode").value = jc; if ($("jname").value) $("joinBtn").focus(); else $("jname").focus() }
+}
