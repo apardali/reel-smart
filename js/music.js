@@ -1,6 +1,9 @@
-// Background music: an original funky game-show groove, synthesised live with Web Audio.
+// Background music: original grooves synthesised live with Web Audio.
 // No audio files, so there is nothing to license. Soft by default.
-const BPM = 108, STEP = 60 / BPM / 4, SWING = 0.16; // 16th notes, light swing
+// Two original grooves; SONG picks the one that plays. "greek" = upbeat Greek summer-pop style,
+// "funk" = the earlier funky game-show groove.
+const SONG = "greek";
+const BPM = SONG === "greek" ? 122 : 108, STEP = 60 / BPM / 4, SWING = SONG === "greek" ? 0 : 0.16;
 const VOL = 0.16;
 let ctx = null, master = null, bus = null, noiseBuf = null;
 let timer = null, nextT = 0, step = 0;
@@ -21,6 +24,52 @@ const STAB = [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0];
 const RIFF4 = [[0, 76, 1], [2, 79, 1], [3, 81, 2], [6, 79, 1], [8, 83, 2], [11, 81, 1], [12, 79, 3]];
 const RIFF8 = [[0, 76, 1], [2, 78, 1], [4, 79, 1], [6, 81, 1], [8, 83, 1], [10, 86, 2], [12, 88, 4]];
 
+/* --- Greek summer pop: D harmonic minor, four-on-the-floor, bouzouki-style lead --- */
+const G_CH = [[62, 65, 69], [62, 65, 69], [55, 58, 62], [57, 61, 64], [62, 65, 69], [60, 64, 67], [58, 62, 65], [57, 61, 64]];
+const G_ROOT = [38, 38, 43, 45, 38, 36, 34, 45];
+const G_BASS = [[0, 0], [3, 0], [6, 12], [8, 0], [11, 0], [14, 12]];
+// Lead melody per bar: [step, midi, length in 16ths]; long notes get the bouzouki tremolo
+const G_MEL = [
+  [[0, 69, 2], [2, 70, 1], [3, 69, 1], [4, 67, 2], [6, 65, 2], [8, 64, 2], [10, 65, 1], [11, 67, 1], [12, 69, 4]],
+  [[0, 74, 2], [2, 73, 1], [3, 74, 1], [4, 76, 2], [6, 74, 2], [8, 73, 2], [10, 70, 2], [12, 69, 4]],
+  [[0, 67, 2], [2, 69, 1], [3, 70, 1], [4, 74, 4], [8, 72, 2], [10, 70, 2], [12, 69, 2], [14, 67, 2]],
+  [[0, 69, 3], [3, 70, 1], [4, 73, 2], [6, 76, 2], [8, 74, 2], [10, 73, 1], [11, 70, 1], [12, 69, 4]],
+  [[0, 69, 2], [2, 70, 1], [3, 69, 1], [4, 67, 2], [6, 65, 2], [8, 64, 2], [10, 65, 1], [11, 67, 1], [12, 69, 4]],
+  [[0, 76, 2], [2, 74, 1], [3, 72, 1], [4, 67, 2], [6, 64, 2], [8, 67, 2], [10, 69, 2], [12, 72, 4]],
+  [[0, 65, 2], [2, 67, 1], [3, 69, 1], [4, 70, 4], [8, 69, 2], [10, 67, 2], [12, 65, 2], [14, 64, 2]],
+  [[0, 69, 2], [2, 70, 2], [4, 73, 2], [6, 74, 2], [8, 76, 6], [14, 73, 2]]
+];
+function bouzouki(t, m, len) {
+  const f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = "peaking"; f.frequency.value = 2600; f.gain.value = 9; f.Q.value = 1.2;
+  const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 300;
+  hp.connect(f); f.connect(g); g.connect(bus); g.gain.value = 1;
+  const picks = len >= 3 * STEP ? Math.floor(len / (STEP / 2)) : 1, dt = len / picks; // tremolo on long notes
+  for (let k = 0; k < picks; k++) {
+    const tt = t + k * dt, v = k ? .055 : .08;
+    for (const [oct, det] of [[0, -4], [0, 4], [12, 0]]) {
+      const o = ctx.createOscillator(), e = ctx.createGain(); o.type = "sawtooth"; o.frequency.value = hz(m + oct); o.detune.value = det;
+      e.gain.setValueAtTime(0.0001, tt); e.gain.exponentialRampToValueAtTime(oct ? v * .5 : v, tt + .004); e.gain.exponentialRampToValueAtTime(0.0001, tt + Math.max(dt, .09) + .12);
+      o.connect(e); e.connect(hp); o.start(tt); o.stop(tt + Math.max(dt, .09) + .15);
+    }
+  }
+}
+function clap(t) { for (const d of [0, .012, .024]) noise(t + d, .32, "bandpass", 1300, .09) }
+function pluckChord(t, notes) {
+  const f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = "lowpass"; f.frequency.value = 3000; env(g, t, .003, .06, .11); f.connect(g); g.connect(bus);
+  for (const m of notes) { const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = hz(m); o.connect(f); o.start(t); o.stop(t + .16) }
+}
+function scheduleGreek(s, t) {
+  const bar = Math.floor(s / 16) % 8, i = s % 16, loop = Math.floor(s / 128);
+  if (i === 0) pad(t, G_CH[bar].map(n => n - 12), STEP * 16);
+  if (i % 4 === 0) kick(t);
+  if (i === 4 || i === 12) clap(t);
+  if (i === 3 || i === 6 || i === 11 || i === 14) noise(t, .12, "bandpass", 3800, .03); // rim / percussion
+  noise(t, i % 4 === 2 ? .1 : .04, "highpass", 8000, i % 4 === 2 ? .1 : .03);
+  if (bar === 7 && i >= 12) snare(t, .5 + (i - 12) * .15); // fill into the next round
+  for (const [st, off] of G_BASS) if (st === i) bass(t, G_ROOT[bar] + off, STEP * 1.5);
+  if (i % 4 === 2) pluckChord(t, G_CH[bar]);
+  if (loop % 2 === 1 || bar >= 4) for (const [st, m, l] of G_MEL[bar]) if (st === i) bouzouki(t, m, l * STEP); // melody comes in on the second half
+}
 function init() {
   if (ctx) return true;
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
@@ -63,7 +112,7 @@ function brass(t, m, len) {
   f.connect(g); g.connect(bus);
   for (const det of [-9, 0, 9]) { const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(m); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + len + .1) }
 }
-function schedule(s, t) {
+function scheduleFunk(s, t) {
   const bar = Math.floor(s / 16) % 8, i = s % 16, len16 = STEP;
   if (i === 0) pad(t, CHORDS[bar], STEP * 16);
   if (KICK[i]) kick(t);
@@ -76,7 +125,7 @@ function schedule(s, t) {
 }
 function tick() {
   while (nextT < ctx.currentTime + 0.12) {
-    schedule(step, nextT + (step % 2 ? SWING * STEP : 0));
+    (SONG === "greek" ? scheduleGreek : scheduleFunk)(step, nextT + (step % 2 ? SWING * STEP : 0));
     step++; nextT += STEP;
   }
 }
