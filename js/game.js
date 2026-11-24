@@ -38,9 +38,18 @@ function renderQR(code) {
 /* ---------- clips + custom questions (files in the repo) ---------- */
 let clips = {}, CUSTOM = [], clipsReady = false;
 const ck = q => q.clip || q.id;
-const hasClip = q => !!clips[ck(q)];
+// A clip is a video file path, or "yt:VIDEOID", "yt:VIDEOID@START" or "yt:VIDEOID@START-END" (seconds).
+function parseClip(v) {
+  if (typeof v !== "string" || !v) return null;
+  const m = v.match(/^yt:([\w-]{11})(?:@(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?)?$/);
+  return m ? { yt: m[1], s: +(m[2] || 0), e: m[3] ? +m[3] : 0 } : { u: v };
+}
+// YouTube's player shows the video title, which gives away "Which movie is this?", so those need a file.
+const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "Name that scene") };
 function updateCount() {
   const n = Object.keys(clips).length;
+  const sceneOk = !clipsReady || Q.some(q => q.c === "Name that scene" && hasClip(q)), sp = document.querySelector('#catPick [data-v="clips"]');
+  if (sp) { sp.classList.toggle("hide", !sceneOk); if (!sceneOk && cat === "clips") document.querySelector('#catPick [data-v="mix"]').click() }
   $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");
 }
 function rebuildQ() {
@@ -48,7 +57,7 @@ function rebuildQ() {
   for (const d of CUSTOM) {
     if (!d || !d.key) continue;
     const kind = d.kind === "tv" ? "tv" : "movie";
-    if (d.clip) clips[d.key] = { u: d.clip };
+    if (d.clip) clips[d.key] = parseClip(d.clip);
     if (d.scene && Array.isArray(d.scene.o) && d.scene.o.length === 4)
       Q.push({ c: "Name that scene", t: kind, custom: 1, q: kind === "tv" ? "Which show is this scene from?" : "Which movie is this scene from?", o: d.scene.o.map(String), a: +d.scene.a || 0, id: d.key });
     (Array.isArray(d.hard) ? d.hard : []).forEach((h, i) => {
@@ -60,7 +69,7 @@ function rebuildQ() {
 const getJSON = u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null);
 (async () => {
   const [cm, cu] = await Promise.all([getJSON("data/clips.json"), getJSON("data/custom.json")]);
-  if (cm && typeof cm === "object") for (const [k, v] of Object.entries(cm)) if (typeof v === "string" && v) clips[k] = { u: v };
+  if (cm && typeof cm === "object") for (const [k, v] of Object.entries(cm)) { const c = parseClip(v); if (c) clips[k] = c }
   if (Array.isArray(cu)) CUSTOM = cu;
   rebuildQ(); clipsReady = true; updateCount();
 })();
@@ -128,10 +137,10 @@ function paintQuestion(q, label, turnText, tiles) {
   $("turn").textContent = turnText; $("cat").textContent = t(q.c); $("qtext").textContent = t(q.q);
   $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(t(o))}</span></button>`).join("");
   $("result").textContent = ""; $("nextBtn").classList.add("hide");
-  const c = clips[ck(q)];
+  const c = hasClip(q) ? clips[ck(q)] : null;
   if (c) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
-    vid.src = c.u; vid.currentTime = 0; const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { });
+    media.load(c);
     $("qtext").textContent = t("Watch the clip…");
     // The question shows after 2 s; the answers pop up once most of the clip has played
     // (25 s in, or just before the end of a shorter clip). The clip keeps playing.
@@ -143,28 +152,84 @@ function paintQuestion(q, label, turnText, tiles) {
   stopVideo(); $("screen").classList.add("hide"); $("revealBtn").classList.add("hide");
   $("emoji").textContent = q.e || ""; $("emoji").classList.toggle("hide", !q.e); return false;
 }
-function stopVideo() { vid.pause(); if (vid.getAttribute("src")) { vid.removeAttribute("src"); vid.load() } }
+function stopVideo() { media.stop() }
 function startTimer(onTick, onEnd) {
   $("qtext").textContent = t(deck[idx].q); $("revealBtn").classList.add("hide"); $("answerArea").classList.remove("hide");
   left = T; $("bar").style.width = "100%"; clearInterval(timer);
   timer = setInterval(() => { left -= .1; $("bar").style.width = Math.max(0, left / T * 100) + "%"; onTick && onTick(); if (left <= 0) onEnd() }, 100);
 }
-vid.addEventListener("timeupdate", () => {
+/* ---------- clip player: a video file, or a clip embedded from YouTube ---------- */
+const media = (() => {
+  let kind = null, yt = null, ytReady = null, cur = null, poll = null;
+  const box = document.createElement("div"); box.className = "ytwrap hide"; box.innerHTML = '<div id="ytPlayer"></div>'; vid.after(box);
+  const loadApi = () => ytReady || (ytReady = new Promise((res, rej) => {
+    if (window.YT && window.YT.Player) return res();
+    const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) prev(); res() };
+    const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = () => { ytReady = null; rej(new Error("YouTube player unavailable")) }; document.head.appendChild(s);
+    setTimeout(() => rej(new Error("YouTube player timed out")), 15000);
+  }));
+  const stopPoll = () => { clearInterval(poll); poll = null };
+  function ytState(e) {
+    const S = window.YT.PlayerState;
+    if (e.data === S.PLAYING) { m.onPlaying(); if (!poll) poll = setInterval(() => m.onTime(), 250) }
+    else if (e.data === S.PAUSED) { stopPoll(); m.onPause() }
+    else if (e.data === S.ENDED) { stopPoll(); m.onPause(); if (kind === "yt") m.onEnded() }
+  }
+  const m = {
+    onPlaying() { }, onPause() { }, onEnded() { }, onError() { }, onTime() { },
+    async load(c) {
+      this.stop(); cur = c;
+      if (c.yt) {
+        kind = "yt"; vid.classList.add("hide"); box.classList.remove("hide");
+        try { await loadApi() } catch (e) { if (cur === c) this.onError(); return }
+        if (cur !== c) return;
+        const o = { videoId: c.yt, startSeconds: c.s || 0 }; if (c.e) o.endSeconds = c.e;
+        if (yt && yt.loadVideoById) yt.loadVideoById(o);
+        else yt = new window.YT.Player("ytPlayer", {
+          width: "100%", height: "100%", videoId: c.yt,
+          playerVars: Object.assign({ start: Math.floor(c.s || 0), autoplay: 1, playsinline: 1, rel: 0 }, c.e ? { end: Math.ceil(c.e) } : {}),
+          events: { onReady: e => { if (cur) e.target.playVideo() }, onStateChange: ytState, onError: () => { if (kind === "yt") m.onError() } }
+        });
+      } else {
+        kind = "file"; box.classList.add("hide"); vid.classList.remove("hide");
+        vid.src = c.u; vid.currentTime = 0; const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { });
+      }
+    },
+    pause() { if (kind === "yt") { try { yt.pauseVideo() } catch (e) { } } else vid.pause() },
+    stop() {
+      stopPoll();
+      if (kind === "yt") { try { yt.stopVideo() } catch (e) { } m.onPause() }
+      else if (kind === "file" || vid.getAttribute("src")) { vid.pause(); if (vid.getAttribute("src")) { vid.removeAttribute("src"); vid.load() } }
+      kind = null; cur = null;
+    },
+    time() { if (kind === "yt") { try { return Math.max(0, yt.getCurrentTime() - (cur.s || 0)) } catch (e) { return 0 } } return vid.currentTime },
+    dur() { if (kind === "yt") { try { const d = (cur.e || yt.getDuration()) - (cur.s || 0); return d > 0 ? d : NaN } catch (e) { return NaN } } return vid.duration }
+  };
+  return m;
+})();
+media.onTime = () => {
   if (!clipQ || answering || deck[idx] !== clipQ || $("play").classList.contains("hide")) return;
-  const d = vid.duration, at = isFinite(d) && d > 0 ? Math.min(ANSWERS_AT, Math.max(1, d - 1.5)) : ANSWERS_AT;
-  if (vid.currentTime >= at) beginAnswers();
-});
+  const d = media.dur(), at = isFinite(d) && d > 0 ? Math.min(ANSWERS_AT, Math.max(1, d - 1.5)) : ANSWERS_AT;
+  if (media.time() >= at) beginAnswers();
+};
 // Background music pauses while a clip plays.
-vid.addEventListener("playing", () => music.duck(true));
-["pause", "ended", "emptied"].forEach(e => vid.addEventListener(e, () => music.duck(false)));
-vid.addEventListener("ended", () => { if (!$("play").classList.contains("hide")) beginAnswers() });
-vid.addEventListener("error", () => { if (!$("play").classList.contains("hide") && vid.getAttribute("src")) { $("result").textContent = t("That clip wouldn't play, so here's the question without it."); $("screen").classList.add("hide"); beginAnswers() } });
-$("revealBtn").addEventListener("click", () => { vid.pause(); beginAnswers() });
+media.onPlaying = () => music.duck(true);
+media.onPause = () => music.duck(false);
+media.onEnded = () => { if (!$("play").classList.contains("hide")) beginAnswers() };
+media.onError = () => { if (!$("play").classList.contains("hide") && clipQ && deck[idx] === clipQ && !answering) { $("result").textContent = t("That clip wouldn't play, so here's the question without it."); $("screen").classList.add("hide"); media.stop(); beginAnswers() } };
+vid.addEventListener("timeupdate", () => media.onTime());
+vid.addEventListener("playing", () => media.onPlaying());
+["pause", "ended", "emptied"].forEach(e => vid.addEventListener(e, () => media.onPause()));
+vid.addEventListener("ended", () => media.onEnded());
+vid.addEventListener("error", () => { if (vid.getAttribute("src")) media.onError() });
+$("revealBtn").addEventListener("click", () => { media.pause(); beginAnswers() });
 function beginAnswers() {
   if (answering) return; answering = true;
   // Clip questions: enough time to watch the rest of the clip, plus 10 seconds (20–75 s).
-  if (!$("screen").classList.contains("hide") && isFinite(vid.duration) && vid.duration > 0)
-    T = Math.min(75, Math.max(BASE_T, Math.ceil(vid.duration - vid.currentTime) + 10)); if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
+  const cd = media.dur();
+  if (!$("screen").classList.contains("hide") && isFinite(cd) && cd > 0)
+    T = Math.min(75, Math.max(BASE_T, Math.ceil(cd - media.time()) + 10)); if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
 
 /* ---------- one-screen mode ---------- */
 function startLocal() {
@@ -300,7 +365,7 @@ function hostAsk() {
   clearTimeout(autoNext); clearInterval(timer);
   H.i = idx; H.answers = {}; H.gains = {}; locked = false; answering = false;
   show("play");
-  const hasC = paintQuestion(deck[idx], t("Question {i} of {n}", { i: idx + 1, n: deck.length }), clips[ck(deck[idx])] ? t("Eyes on the screen") : t("Answer on your phone"), true);
+  const hasC = paintQuestion(deck[idx], t("Question {i} of {n}", { i: idx + 1, n: deck.length }), hasClip(deck[idx]) ? t("Eyes on the screen") : t("Answer on your phone"), true);
   renderHostBoard();
   if (hasC) { H.phase = "watch"; hostWrite() } else beginAnswers();
 }

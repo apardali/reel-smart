@@ -1,10 +1,8 @@
 # Clips to record
 
-72 new **Clip challenge** questions are already in the game. Each one stays hidden until its clip is added.
+**Update:** the game now plays these scenes straight from YouTube (the links below), so nothing needs recording. The links are set in `data/clips.json` as `yt:VIDEO_ID`; to start a clip later in the video use `yt:VIDEO_ID@SECONDS`, and to stop early `yt:VIDEO_ID@START-END`. `hb-3` (the Red Wedding) has no link yet, so its question stays hidden.
 
-**How to record:** find the scene and start recording a few seconds before the moment the question asks about. Keep clips 15–45 seconds, mp4 if possible, and under 100 MB. Avoid recording player controls or pop-ups.
-
-**Name each file exactly as shown** (for example `hp-1.mp4`) and put it in your *Movie Clips* folder. Then tell Claude and they'll be added to the game.
+The rest of this guide is kept for reference, in case you want to record your own copies later.
 
 **Timestamps are approximate.** They're from memory, not checked against a copy of each film, and they vary between versions and streaming services, so allow a few minutes either way. For TV episodes the timestamp is within the episode. The scene description is the reliable guide.
 
