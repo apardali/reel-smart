@@ -29,6 +29,8 @@ Open **admin.html**, choose the clip, enter the title and answers, and click **G
 2. Pasting the generated entry into `data/custom.json`.
 3. Committing. The site updates in about a minute.
 
+**Difficulty:** every built-in question has a level in `js/questions.js` (`lv:1` easy, `lv:2` medium, `lv:3` hard), and the setup screen's Easy / Medium / Hard buttons only deal questions of that level (Mixed deals all three). If a level runs short for the chosen category, the game tops up from the next level so a full game always plays. For your own questions in `data/custom.json`, add `"level": "easy"`, `"medium"` or `"hard"` to the entry (or to one clip question inside it); without it they count as medium.
+
 To attach a clip to an existing built-in question, upload it to `clips/` and add a line to `data/clips.json`:
 ```json
 "name-that-scene-jurassic-park": "clips/jurassic-park.mp4"

@@ -1,6 +1,6 @@
 // Interface translations. Question and option translations live in q-<lang>.js.
-import QEL from "./q-el.js?v=1795563051";
-import QPT from "./q-pt.js?v=1795563051";
+import QEL from "./q-el.js?v=1795650000";
+import QPT from "./q-pt.js?v=1795650000";
 const QD = { el: QEL, pt: QPT };
 export const LANGS = [["en", "English"], ["el", "Ελληνικά"], ["es", "Español"], ["fr", "Français"], ["pt", "Português"]];
 const D = {
@@ -27,6 +27,11 @@ const D = {
 "Add": "Προσθήκη",
 "Category": "Κατηγορία",
 "Everything": "Όλα",
+"Difficulty": "Δυσκολία",
+"Easy": "Εύκολο",
+"Medium": "Μέτριο",
+"Hard": "Δύσκολο",
+"Mixed": "Ανάμικτο",
 "Movies + TV": "Ταινίες + σειρές",
 "Movies only": "Μόνο ταινίες",
 "TV only": "Μόνο σειρές",
@@ -155,6 +160,11 @@ const D = {
 "Add": "Añadir",
 "Category": "Categoría",
 "Everything": "Todo",
+"Difficulty": "Dificultad",
+"Easy": "Fácil",
+"Medium": "Medio",
+"Hard": "Difícil",
+"Mixed": "Mixto",
 "Movies + TV": "Cine + TV",
 "Movies only": "Solo cine",
 "TV only": "Solo TV",
@@ -283,6 +293,11 @@ const D = {
 "Add": "Ajouter",
 "Category": "Catégorie",
 "Everything": "Tout",
+"Difficulty": "Difficulté",
+"Easy": "Facile",
+"Medium": "Moyen",
+"Hard": "Difficile",
+"Mixed": "Mixte",
 "Movies + TV": "Films + séries",
 "Movies only": "Films uniquement",
 "TV only": "Séries uniquement",
@@ -411,6 +426,11 @@ const D = {
 "Add": "Adicionar",
 "Category": "Categoria",
 "Everything": "Tudo",
+"Difficulty": "Dificuldade",
+"Easy": "Fácil",
+"Medium": "Médio",
+"Hard": "Difícil",
+"Mixed": "Misto",
 "Movies + TV": "Filmes + séries",
 "Movies only": "Só filmes",
 "TV only": "Só séries",
