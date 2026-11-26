@@ -1,6 +1,6 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795563051";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795650000";
 import { music } from "./music.js?v=1795562294";
-import { Q } from "./questions.js?v=1795563051";
+import { Q } from "./questions.js?v=1795650000";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
@@ -10,7 +10,7 @@ const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;"
 const BASE_T = 20, LET = ["A", "B", "C", "D"];
 let T = BASE_T; // seconds to answer; clip questions get longer (see beginAnswers)
 const SCREENS = ["setup", "lobby", "join", "phone", "play", "end"];
-let mode = "host", cat = "all", per = 10;
+let mode = "host", cat = "all", per = 10, lvl = "mix";
 const show = id => {
   music.want(id !== "join" && id !== "phone");
   SCREENS.forEach(s => $(s).classList.toggle("hide", s !== id));
@@ -50,6 +50,8 @@ function updateCount() {
   const n = Object.keys(clips).length;
   $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");
 }
+// Difficulty of an admin-added question: "easy"/"medium"/"hard" or 1-3 on the question or its clip; medium if unset.
+function lvOf(...xs) { for (const x of xs.reverse()) { const v = x && x.level; const n = { easy: 1, medium: 2, hard: 3 }[String(v).toLowerCase()] || +v; if (n >= 1 && n <= 3) return n } return 2 }
 function rebuildQ() {
   Q.length = BASE;
   for (const d of CUSTOM) {
@@ -57,10 +59,10 @@ function rebuildQ() {
     const kind = d.kind === "tv" ? "tv" : "movie";
     if (d.clip) clips[d.key] = parseClip(d.clip);
     if (d.scene && Array.isArray(d.scene.o) && d.scene.o.length === 4)
-      Q.push({ c: "Name that scene", t: kind, custom: 1, q: kind === "tv" ? "Which show is this scene from?" : "Which movie is this scene from?", o: d.scene.o.map(String), a: +d.scene.a || 0, id: d.key });
+      Q.push({ lv: lvOf(d), c: "Name that scene", t: kind, custom: 1, q: kind === "tv" ? "Which show is this scene from?" : "Which movie is this scene from?", o: d.scene.o.map(String), a: +d.scene.a || 0, id: d.key });
     (Array.isArray(d.hard) ? d.hard : []).forEach((h, i) => {
       if (h && h.q && Array.isArray(h.o) && h.o.length === 4)
-        Q.push({ c: "Clip challenge", t: kind, hard: 1, custom: 1, clip: d.key, q: String(h.q), o: h.o.map(String), a: +h.a || 0, id: d.key + "-h" + i });
+        Q.push({ lv: lvOf(d, h), c: "Clip challenge", t: kind, hard: 1, custom: 1, clip: d.key, q: String(h.q), o: h.o.map(String), a: +h.a || 0, id: d.key + "-h" + i });
     });
   }
 }
@@ -104,7 +106,7 @@ const renderBoard = on => { $("board").innerHTML = players.map((p, i) => `<div c
 $("addForm").addEventListener("submit", e => { e.preventDefault(); const v = $("pname").value.trim(); if (v && players.length < 12) { players.push({ n: v, s: 0 }); $("pname").value = ""; savePlayers(); renderChips(); renderBoard(-1) } });
 $("chips").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; players.splice(+b.dataset.i, 1); savePlayers(); renderChips(); renderBoard(-1) });
 const pick = (id, fn) => $(id).addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b.dataset.v) });
-pick("catPick", v => cat = v); pick("lenPick", v => per = +v); pick("modePick", v => { mode = v; applyMode() });
+pick("catPick", v => cat = v); pick("lvlPick", v => lvl = v); pick("lenPick", v => per = +v); pick("modePick", v => { mode = v; applyMode() });
 function applyMode() {
   $("localPlayers").classList.toggle("hide", mode !== "local");
   $("lenLabel").textContent = mode === "local" ? t("Questions per player") : t("Questions");
@@ -118,7 +120,20 @@ function applyMode() {
 function buildDeck(n) {
   const needsClip = q => q.hard || q.c === "Name that scene";
   const ok = q => !needsClip(q) || hasClip(q);
-  const pool0 = shuffle(Q.filter(q => ok(q) && (cat === "all" || q.t === cat)));
+  const pool = Q.filter(q => ok(q) && (cat === "all" || q.t === cat));
+  if (lvl === "mix") return mixDeck(pool, n);
+  // Chosen level first; if it runs short, top up from the next level over, then the far one.
+  const L = +lvl, lv = q => q.lv || 2;
+  let deck = mixDeck(pool.filter(q => lv(q) === L), n);
+  for (const d of [1, 2]) {
+    if (deck.length >= n) break;
+    deck = deck.concat(mixDeck(pool.filter(q => Math.abs(lv(q) - L) === d), n - deck.length));
+  }
+  return deck;
+}
+function mixDeck(list, n) {
+  if (n <= 0) return [];
+  const pool0 = shuffle(list.slice());
   const seen = new Set(), first = [], rest = [];
   for (const q of pool0) { const k = q.clip || q.e || q.id; (seen.has(k) ? rest : first).push(q); seen.add(k) }
   // Mix it up: never the same kind of question twice in a row, and avoid the same franchise back to back.

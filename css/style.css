@@ -689,3 +689,14 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 #setup #catPick .pill.pill-wide{font-size:clamp(20px,5.8vw,30px);min-height:clamp(62px,17vw,86px)}
 @media (min-width:900px){#setup #catPick .pill.pill-wide{font-size:24px;min-height:76px}}
 @media (min-aspect-ratio:4/3) and (min-width:900px){#setup #catPick .pill.pill-wide{font-size:calc(var(--u)*3.3);min-height:calc(var(--u)*9.5)}}
+
+/* ===== Difficulty picker (Easy / Medium / Hard / Mixed), under the categories ===== */
+#lvlPick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(6px,2vw,14px)}
+#setup #lvlPick .pill{font-size:clamp(13px,3.7vw,22px);min-height:clamp(38px,10vw,60px);padding:2px 4px;white-space:nowrap;letter-spacing:-.01em}
+@media (min-width:900px){#setup #lvlPick .pill{font-size:19px;min-height:52px}}
+@media (min-aspect-ratio:4/3) and (min-width:900px){
+ #setup .setB label#lvlLabel{margin-top:calc(var(--u)*2)}
+ #setup #lvlPick{gap:calc(var(--u)*1.6)}
+ #setup #lvlPick .pill{min-height:calc(var(--u)*5.4);font-size:calc(var(--u)*2.4);border-radius:999px}
+ #setup #catPick .pill.pill-wide{min-height:calc(var(--u)*7);font-size:calc(var(--u)*3)}
+}
