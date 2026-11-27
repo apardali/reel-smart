@@ -1,6 +1,6 @@
 import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795650000";
 import { music } from "./music.js?v=1795562294";
-import { Q } from "./questions.js?v=1795650000";
+import { Q } from "./questions.js?v=1795743000";
 
 const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 Q.forEach(q => q.id = slug(q.c + "-" + q.o[q.a]));
@@ -154,7 +154,6 @@ function warn(t) { const w = $("setupWarn"); w.textContent = t; w.classList.remo
 
 /* ---------- shared question view ---------- */
 let autoQ = null, clipQ = null;
-const ANSWERS_AT = 25; // seconds of clip before the answers appear
 let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = false;
 function paintQuestion(q, label, turnText, tiles) {
   T = BASE_T;
@@ -167,11 +166,8 @@ function paintQuestion(q, label, turnText, tiles) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
     media.load(c);
     $("qtext").textContent = t("Watch the clip…");
-    // The question shows after 2 s; the answers pop up once most of the clip has played
-    // (25 s in, or just before the end of a shorter clip). The clip keeps playing.
-    clearTimeout(autoQ); const myQ = q;
-    autoQ = setTimeout(() => { if (deck[idx] === myQ && !answering) $("qtext").textContent = t(myQ.q) }, 2000);
-    clipQ = myQ;
+    // The question and answers stay hidden until the clip has finished playing.
+    clearTimeout(autoQ); clipQ = q;
     return true;
   }
   stopVideo(); $("screen").classList.add("hide"); $("revealBtn").classList.add("hide");
@@ -235,8 +231,9 @@ const media = (() => {
 })();
 media.onTime = () => {
   if (!clipQ || answering || deck[idx] !== clipQ || $("play").classList.contains("hide")) return;
-  const d = media.dur(), at = isFinite(d) && d > 0 ? Math.min(ANSWERS_AT, Math.max(1, d - 1.5)) : ANSWERS_AT;
-  if (media.time() >= at) beginAnswers();
+  // Backup for when the player doesn't report "ended": go to the question at the very end of the clip.
+  const d = media.dur();
+  if (isFinite(d) && d > 0 && media.time() >= d - 0.3) beginAnswers();
 };
 // Background music pauses while a clip plays.
 media.onPlaying = () => music.duck(true);
@@ -251,10 +248,8 @@ vid.addEventListener("error", () => { if (vid.getAttribute("src")) media.onError
 $("revealBtn").addEventListener("click", () => { media.pause(); beginAnswers() });
 function beginAnswers() {
   if (answering) return; answering = true;
-  // Clip questions: enough time to watch the rest of the clip, plus 10 seconds (20–75 s).
-  const cd = media.dur();
-  if (!$("screen").classList.contains("hide") && isFinite(cd) && cd > 0)
-    T = Math.min(75, Math.max(BASE_T, Math.ceil(cd - media.time()) + 10)); if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
+  // Clip questions come after the clip, so give a little longer to think back (25 s).
+  if (!$("screen").classList.contains("hide")) { T = BASE_T + 5; media.pause() } if (mode === "host") hostBeginAnswer(); else startTimer(null, () => answer(-1)) }
 
 /* ---------- one-screen mode ---------- */
 function startLocal() {
@@ -432,7 +427,8 @@ function buildState() {
   const q = deck[H.i];
   const st = { code: H.code, rid: H.rid, phase: H.phase, i: H.i, total: deck.length, lang: getLang(),
     players: [...H.players.values()].map(p => ({ k: p.k, n: p.n, s: p.s, a: p.k in H.answers, g: (H.gains[p.k] || {}).g || 0, r: !!(H.gains[p.k] || {}).r })) };
-  if (q && (st.phase === "answer" || st.phase === "reveal" || st.phase === "watch")) { st.q = { c: q.c, q: q.q, o: q.o }; if (st.phase === "reveal") st.correct = q.a }
+  if (q && st.phase === "watch") st.q = { c: q.c }; // nothing to give away while the clip plays
+  if (q && (st.phase === "answer" || st.phase === "reveal")) { st.q = { c: q.c, q: q.q, o: q.o }; if (st.phase === "reveal") st.correct = q.a }
   return st;
 }
 function sendState(conn) { if (!H) return; try { conn.send({ t: "state", st: buildState() }) } catch (e) { } }
