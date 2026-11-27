@@ -1,4 +1,4 @@
-import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795650000";
+import { t, setLang, getLang, applyStatic, LANGS } from "./i18n.js?v=1795651000";
 import { music } from "./music.js?v=1795562294";
 import { Q } from "./questions.js?v=1795743000";
 
