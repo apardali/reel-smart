@@ -201,7 +201,7 @@ const media = (() => {
   let kind = null, yt = null, ytReady = null, cur = null, poll = null;
   const box = document.createElement("div"); box.className = "ytwrap hide"; box.innerHTML = '<div id="ytPlayer"></div>'; vid.after(box);
   // Shown when a clip is waiting: YouTube often holds an ad (or the clip) until someone taps the video.
-  const hint = document.createElement("p"); hint.className = "cliphint hide"; box.after(hint);
+  const hint = document.createElement("aside"); hint.className = "cliphint hide"; hint.setAttribute("role", "status"); box.appendChild(hint);
   const loadApi = () => ytReady || (ytReady = new Promise((res, rej) => {
     if (window.YT && window.YT.Player) return res();
     const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) prev(); res() };
@@ -241,10 +241,10 @@ const media = (() => {
           if (cur !== c || started) return;
           let st = -1; try { st = yt.getPlayerState() } catch (e) { }
           if (st !== 3) { try { yt.mute(); yt.playVideo() } catch (e) { } } // 3 = buffering (often an ad loading)
-          hint.textContent = t("Tap the video to play it. YouTube may show an ad first; tap Skip when it appears.");
+          hint.innerHTML = `<b>▶ ${esc(t("Tap the video to start the clip"))}</b><span>${esc(t("YouTube may play an ad first. Tap Skip when it appears."))}</span>`;
           hint.classList.remove("hide");
           wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 75000);
-        }, 6000);
+        }, 4000);
         const o = { videoId: c.yt, startSeconds: c.s || 0 }; if (c.e) o.endSeconds = c.e;
         if (yt && yt.loadVideoById) yt.loadVideoById(o);
         else yt = new window.YT.Player("ytPlayer", {

@@ -704,5 +704,14 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 /* "That clip wouldn't play" note on the TV */
 #play .clipnote{margin:0 0 .6em;padding:.45em .9em;border-radius:12px;background:rgba(0,0,0,.35);color:#ffd77a;font-weight:600;text-align:center}
 
-/* "Tap the video to play it" under a clip that is waiting (usually for an ad) */
-.cliphint{margin:.5em 0 0;text-align:center;color:#ffd77a;font-weight:700;font-size:clamp(15px,1.6vw,26px)}
+
+/* Pop-up over the top of a clip that's waiting for a tap (usually an ad). It lets taps through to the video. */
+.ytwrap{position:relative}
+.cliphint{position:absolute;left:50%;top:6%;transform:translateX(-50%);z-index:5;pointer-events:none;width:max-content;max-width:88%;
+ display:flex;flex-direction:column;align-items:center;gap:.25em;text-align:center;padding:.6em 1.2em;border-radius:18px;
+ background:rgba(8,8,16,.85);border:3px solid #f5c04a;box-shadow:0 0 24px rgba(245,192,74,.55);color:#fff;animation:clipPulse 1.6s ease-in-out infinite}
+.cliphint b,.cliphint span{display:block}
+.cliphint b{font:800 clamp(18px,2.6vw,40px)/1.15 system-ui,sans-serif;color:#ffd77a}
+.cliphint span{font:600 clamp(13px,1.4vw,22px)/1.3 system-ui,sans-serif;opacity:.92}
+.cliphint.hide{display:none}
+@keyframes clipPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
