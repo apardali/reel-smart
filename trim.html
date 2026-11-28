@@ -17,9 +17,11 @@
  .card{background:rgba(255,255,255,.06);border-radius:16px;padding:14px}
  #pl{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden} #pl iframe,#pl>div{width:100%;height:100%;border:0}
  .now{font:700 20px system-ui,sans-serif;margin:8px 0} .win{font:700 18px system-ui,sans-serif;color:#ffd77a}
- .qs{margin:.4em 0 .6em;padding-left:1.2em} .qs li{margin:.2em 0}
+ #qs{margin:.5em 0 .8em;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.35)}
+ #qs .q{font:700 19px/1.35 system-ui,sans-serif;margin:0 0 .4em} #qs ol{margin:0;padding-left:1.4em} #qs li{margin:.15em 0;font-size:17px}
+ #qs li.right{color:#7be38b;font-weight:700} #qs li.right::after{content:"  ✓ correct answer";font-weight:600;font-size:14px}
  #list{list-style:none;margin:0;padding:0;max-height:70vh;overflow:auto} #list li{padding:8px 10px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
- #list li:hover,#list li.on{background:rgba(245,192,74,.18)} #list .k{flex:1;word-break:break-all} #list .st{font-size:13px;opacity:.85;white-space:nowrap}
+ #list li:hover,#list li.on{background:rgba(245,192,74,.18)} #list .k{flex:1;overflow-wrap:anywhere} #list .st{font-size:13px;opacity:.85;white-space:nowrap}
  .done{color:#7be38b} .todo{color:#ffd77a}
  textarea{width:100%;min-height:120px;background:#000;color:#fff;border-radius:10px;border:1px solid #444;font:13px/1.4 ui-monospace,monospace;padding:8px;box-sizing:border-box}
  .warn{color:#ff9b9b;font-weight:700} .warn.ok{color:#7be38b}
@@ -34,7 +36,7 @@
    <div id="pl"><div id="yt"></div></div>
    <div class="now" id="now">Pick a question from the list.</div>
    <div class="win" id="win"></div>
-   <p class="qs" id="qs" style="font-weight:600;font-size:18px"></p>
+   <div id="qs"></div>
    <div>
     <button id="back5" class="alt" disabled>−5 s</button><button id="fwd5" class="alt" disabled>+5 s</button>
     <button id="setS" disabled>Start here</button><button id="setE" disabled>End here</button>
@@ -77,7 +79,7 @@ function renderList() {
     const c = clips[it.key], t = mine(it);
     const li = document.createElement("li"); if (cur === it.id) li.className = "on";
     li.innerHTML = '<span class="k"></span><span class="st"></span>';
-    li.children[0].textContent = `${it.key} · ${it.q}`;
+    li.children[0].innerHTML = '<small style="opacity:.7"></small><br>'; li.children[0].firstChild.textContent = it.key; li.children[0].append(it.q);
     li.children[1].textContent = t ? `✓ ${fmt(t.s)}–${fmt(t.e)}` : c.e ? `${fmt(c.s)}–${fmt(c.e)}` : "first 60 s";
     li.children[1].className = "st " + (t ? "done" : "todo");
     li.onclick = () => pick(it.id); $("list").appendChild(li);
@@ -90,7 +92,9 @@ async function pick(id) {
   const it = item(id); cur = id; const c = clips[it.key], t = mine(it);
   sel = t ? { s: t.s, e: t.e } : { s: c.s || 0, e: c.e && c.e > (c.s || 0) && c.e - (c.s || 0) <= MAX ? c.e : (c.s || 0) + MAX };
   $("now").textContent = it.key; showWin(); $("msg").textContent = ""; $("msg").className = "warn";
-  $("qs").textContent = "Question: " + it.q;
+  $("qs").innerHTML = ""; const qd = document.createElement("p"); qd.className = "q"; qd.textContent = it.q; $("qs").appendChild(qd);
+  const ol = document.createElement("ol"); ol.type = "A";
+  (it.o || []).forEach((o, i) => { const li = document.createElement("li"); li.textContent = o; if (i === it.a) li.className = "right"; ol.appendChild(li) }); $("qs").appendChild(ol);
   ["back5", "fwd5", "setS", "setE", "prev", "save", "reset"].forEach(x => $(x).disabled = false);
   renderList(); await mk(); clearInterval(watch); player.cueVideoById({ videoId: c.yt, startSeconds: sel.s });
 }
@@ -110,7 +114,7 @@ $("send").onclick = async () => {
 (async () => {
   const cm = await fetch("data/clips.json", { cache: "no-cache" }).then(r => r.json()).catch(() => ({}));
   for (const [k, v] of Object.entries(cm)) { const c = parse(v); if (c) clips[k] = c }
-  try { const { Q } = await import("./js/questions.js"); for (const q of Q) if (q.clip && clips[q.clip]) items.push({ id: q.clip + "|" + tslug(q.q), key: q.clip, q: q.q }) } catch (e) { }
+  try { const { Q } = await import("./js/questions.js"); for (const q of Q) if (q.clip && clips[q.clip]) items.push({ id: q.clip + "|" + tslug(q.q), key: q.clip, q: q.q, o: q.o, a: q.a }) } catch (e) { }
   renderList(); renderOut();
 })();
 </script>
