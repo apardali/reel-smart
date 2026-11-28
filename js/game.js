@@ -198,6 +198,8 @@ function startTimer(onTick, onEnd) {
 const media = (() => {
   let kind = null, yt = null, ytReady = null, cur = null, poll = null;
   const box = document.createElement("div"); box.className = "ytwrap hide"; box.innerHTML = '<div id="ytPlayer"></div>'; vid.after(box);
+  // Shown when a clip is waiting: YouTube often holds an ad (or the clip) until someone taps the video.
+  const hint = document.createElement("p"); hint.className = "cliphint hide"; box.after(hint);
   const loadApi = () => ytReady || (ytReady = new Promise((res, rej) => {
     if (window.YT && window.YT.Player) return res();
     const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) prev(); res() };
@@ -211,7 +213,7 @@ const media = (() => {
   function ytState(e) {
     if (stale(e)) return;
     const S = window.YT.PlayerState;
-    if (e.data === S.PLAYING) { started = true; clearTimeout(wd) }
+    if (e.data === S.PLAYING) { started = true; clearTimeout(wd); hint.classList.add("hide") }
     if (e.data === S.PLAYING) { m.onPlaying(); if (!poll) poll = setInterval(() => m.onTime(), 250) }
     else if (e.data === S.PAUSED) { stopPoll(); m.onPause() }
     else if (e.data === S.ENDED) {
@@ -230,15 +232,17 @@ const media = (() => {
         kind = "yt"; vid.classList.add("hide"); box.classList.remove("hide");
         try { await loadApi() } catch (e) { if (cur === c) this.onError("api"); return }
         if (cur !== c) return;
-        // If the clip hasn't started after 12 s (often a TV browser blocking autoplay with sound), try it muted.
-        // YouTube may play an ad first, so only give up if nothing has played after 45 s in all.
+        // If the clip hasn't started after 6 s, ask for a tap on the video: YouTube often holds an ad (or the clip)
+        // until someone taps it. Also try playing it muted. Only give up after about 80 s with nothing playing.
         started = false; clearTimeout(wd);
         wd = setTimeout(() => {
           if (cur !== c || started) return;
           let st = -1; try { st = yt.getPlayerState() } catch (e) { }
           if (st !== 3) { try { yt.mute(); yt.playVideo() } catch (e) { } } // 3 = buffering (often an ad loading)
-          wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 33000);
-        }, 12000);
+          hint.textContent = t("Tap the video to play it. YouTube may show an ad first; tap Skip when it appears.");
+          hint.classList.remove("hide");
+          wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 75000);
+        }, 6000);
         const o = { videoId: c.yt, startSeconds: c.s || 0 }; if (c.e) o.endSeconds = c.e;
         if (yt && yt.loadVideoById) yt.loadVideoById(o);
         else yt = new window.YT.Player("ytPlayer", {
@@ -253,7 +257,7 @@ const media = (() => {
     },
     pause() { if (kind === "yt") { try { yt.pauseVideo() } catch (e) { } } else vid.pause() },
     stop() {
-      stopPoll(); clearTimeout(wd); started = false;
+      stopPoll(); clearTimeout(wd); started = false; hint.classList.add("hide");
       if (kind === "yt") { try { yt.stopVideo() } catch (e) { } m.onPause() }
       else if (kind === "file" || vid.getAttribute("src")) { vid.pause(); if (vid.getAttribute("src")) { vid.removeAttribute("src"); vid.load() } }
       kind = null; cur = null;

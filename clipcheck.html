@@ -12,7 +12,7 @@
  .cc h1{font:800 26px/1.2 system-ui,sans-serif;margin:0 0 6px} .cc p{margin:.4em 0 1em;opacity:.9}
  .cc button{font:700 17px system-ui,sans-serif;padding:.6em 1.2em;border-radius:999px;border:2px solid #e2ad42;background:#f5c04a;color:#1b1300;cursor:pointer;margin:0 .4em .6em 0}
  .cc button.alt{background:transparent;color:#ffd77a}
- #ccPlayer{width:320px;height:180px;margin:6px 0 12px;background:#000;border-radius:10px;overflow:hidden}
+ #ccPlayer{width:400px;height:225px;max-width:100%;margin:6px 0 12px;background:#000;border-radius:10px;overflow:hidden}
  #ccSum{font-weight:700;margin:.6em 0}
  #ccProb{background:#fff;color:#111;border-radius:14px;padding:14px 18px;margin:10px 0 16px}
  #ccProb h2{margin:0 0 4px;font:800 22px system-ui,sans-serif;color:#111!important;-webkit-text-fill-color:#111;background:none!important;text-shadow:none!important;filter:none!important} #ccProb .tip{margin:0 0 8px;color:#444}
@@ -50,7 +50,7 @@
  });
  let cur = null, ready = null;
  const mk = () => ready || (ready = new Promise(ok => {
-  player = new YT.Player("ccYT", { width: "320", height: "180", playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0 },
+  player = new YT.Player("ccYT", { width: "400", height: "225", playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0 },
    events: { onReady: () => ok(), onStateChange: e => cur && cur.st(e), onError: e => cur && cur.err(e) } });
  }));
  async function tryOne(id) {
@@ -75,20 +75,20 @@
    const li = document.createElement("li"); li.className = r.s;
    li.innerHTML = `<b>${r.s === "ok" ? "✓" : r.s === "bad" ? "✗" : "…"}</b><span class="k"></span><span></span>`;
    li.children[1].textContent = k + (r.title ? " · " + r.title : "");
-   li.children[2].textContent = r.s === "ok" ? "plays" : r.s === "bad" ? `error ${r.code}: ${MEAN[r.code] || "unknown"}` : "didn't start";
+   li.children[2].textContent = r.s === "ok" ? "plays" : r.s === "bad" ? `error ${r.code}: ${MEAN[r.code] || "unknown"}` : "needs a tap (likely an ad)";
    $("ccList").appendChild(li);
   }
   try { player.stopVideo() } catch (e) { }
   try { localStorage.setItem(KEY, JSON.stringify(bad)) } catch (e) { }
   const n = s => res.filter(r => r.s === s).length;
-  $("ccSum").textContent = `${n("ok")} play, ${n("bad")} blocked, ${n("slow")} didn't start. Blocked clips are now skipped in games on this device.`;
+  $("ccSum").textContent = `${n("ok")} play, ${n("bad")} blocked, ${n("slow")} need a tap to start (usually an ad). Blocked clips are now skipped in games on this device.`;
   $("ccGo").disabled = false;
   const probs = report();
   $("ccProbList").innerHTML = ""; probs.forEach(x => { const li = document.createElement("li"); li.textContent = x; $("ccProbList").appendChild(li) });
   if (!probs.length) { const li = document.createElement("li"); li.textContent = "None: every clip plays here."; $("ccProbList").appendChild(li) }
   $("ccProb").hidden = false; $("ccShare").hidden = !navigator.share; $("ccProb").scrollIntoView({ behavior: "smooth" });
  };
- const report = () => res.filter(r => r.s !== "ok").map(r => `${r.k} (${r.s === "bad" ? "error " + r.code : "didn't start"})`);
+ const report = () => res.filter(r => r.s !== "ok").map(r => `${r.k} (${r.s === "bad" ? "error " + r.code : "needs a tap"})`);
  $("ccShare").onclick = async () => {
   const txt = report().join("\n") || "All clips play.";
   try { await navigator.share({ title: "Clips to replace", text: txt }) } catch (e) { }

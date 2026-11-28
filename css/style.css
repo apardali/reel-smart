@@ -703,3 +703,6 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
 
 /* "That clip wouldn't play" note on the TV */
 #play .clipnote{margin:0 0 .6em;padding:.45em .9em;border-radius:12px;background:rgba(0,0,0,.35);color:#ffd77a;font-weight:600;text-align:center}
+
+/* "Tap the video to play it" under a clip that is waiting (usually for an ad) */
+.cliphint{margin:.5em 0 0;text-align:center;color:#ffd77a;font-weight:700;font-size:clamp(15px,1.6vw,26px)}
