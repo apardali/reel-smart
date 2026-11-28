@@ -48,9 +48,19 @@ function parseClip(v) {
   return { yt: m[1], s, e: e > s && e - s <= MAXCLIP ? e : s + MAXCLIP };
 }
 const MAXCLIP = 60;
-// Clip windows set on this device with the Trim clips page (trim.html), until they're saved into data/clips.json.
+// Per-question clip windows (one clip can have several questions about different moments).
+// data/trims.json holds the saved ones; windows set on this device with the Trim clips page (trim.html) override them.
 const TRIMKEY = "reelsmart-trims";
-function applyTrims() { let tr = {}; try { tr = JSON.parse(localStorage.getItem(TRIMKEY) || "{}") || {} } catch (e) { } for (const [k, v] of Object.entries(tr)) { const c = clips[k]; if (c && c.yt && v && v.yt === c.yt) clips[k] = parseClip(`yt:${c.yt}@${v.s}-${v.e}`) } }
+let qTrims = {};
+const tslug = x => String(x).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+const tid = q => (q.clip || q.id) + "|" + tslug(q.q);
+function loadTrims(file) {
+  for (const [k, v] of Object.entries(file || {})) { const c = parseClip(v); if (c && c.yt) qTrims[k] = c }
+  let loc = {}; try { loc = JSON.parse(localStorage.getItem(TRIMKEY) || "{}") || {} } catch (e) { }
+  for (const [k, v] of Object.entries(loc)) if (v && v.yt && k.includes("|")) qTrims[k] = parseClip(`yt:${v.yt}@${v.s}-${v.e}`);
+}
+// The clip to play for a question: its own window if one is set for this same video, otherwise the clip's default.
+const withWin = (q, c) => { const w = c && c.yt && qTrims[tid(q)]; return w && w.yt === c.yt ? { ...c, s: w.s, e: w.e } : c };
 // YouTube's player shows the video title, which gives away "Which movie is this?", so those need a file.
 const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "Name that scene") };
 // Clips YouTube refused to play here (removed, or the owner blocks playback on other sites) are skipped for a week.
@@ -82,10 +92,10 @@ function rebuildQ() {
 }
 const getJSON = u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null);
 (async () => {
-  const [cm, cu] = await Promise.all([getJSON("data/clips.json"), getJSON("data/custom.json")]);
+  const [cm, cu, tr] = await Promise.all([getJSON("data/clips.json"), getJSON("data/custom.json"), getJSON("data/trims.json")]);
   if (cm && typeof cm === "object") for (const [k, v] of Object.entries(cm)) { const c = parseClip(v); if (c) clips[k] = c }
   if (Array.isArray(cu)) CUSTOM = cu;
-  rebuildQ(); applyTrims(); clipsReady = true; updateCount();
+  rebuildQ(); loadTrims(tr); clipsReady = true; updateCount();
 })();
 
 /* ---------- peer-to-peer link (PeerJS) ---------- */
@@ -188,7 +198,7 @@ function paintQuestion(q, label, turnText, tiles) {
   const c = hasClip(q) ? clips[ck(q)] : null;
   if (c) {
     $("emoji").classList.add("hide"); $("screen").classList.remove("hide"); $("answerArea").classList.add("hide"); $("revealBtn").classList.remove("hide");
-    media.load(c);
+    media.load(withWin(q, c));
     $("qtext").textContent = t("Watch the clip…");
     // The question and answers stay hidden until the clip has finished playing.
     clearTimeout(autoQ); clipQ = q;
