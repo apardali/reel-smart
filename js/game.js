@@ -214,7 +214,12 @@ const media = (() => {
     if (e.data === S.PLAYING) { started = true; clearTimeout(wd) }
     if (e.data === S.PLAYING) { m.onPlaying(); if (!poll) poll = setInterval(() => m.onTime(), 250) }
     else if (e.data === S.PAUSED) { stopPoll(); m.onPause() }
-    else if (e.data === S.ENDED) { stopPoll(); m.onPause(); if (kind === "yt") m.onEnded() }
+    else if (e.data === S.ENDED) {
+      // An ad finishing can look like the clip ending; only count it when the clip itself has played.
+      let t = 0; try { t = e.target.getCurrentTime() } catch (er) { }
+      if (!cur.e && t < 3) return;
+      stopPoll(); m.onPause(); if (kind === "yt") m.onEnded()
+    }
   }
   const m = {
     onPlaying() { }, onPause() { }, onEnded() { }, onError() { }, onTime() { },
@@ -225,14 +230,15 @@ const media = (() => {
         kind = "yt"; vid.classList.add("hide"); box.classList.remove("hide");
         try { await loadApi() } catch (e) { if (cur === c) this.onError("api"); return }
         if (cur !== c) return;
-        // If the clip hasn't started after 8 s (often a TV browser blocking autoplay with sound), try it muted;
-        // if it still hasn't started 8 s later, give up on it.
+        // If the clip hasn't started after 12 s (often a TV browser blocking autoplay with sound), try it muted.
+        // YouTube may play an ad first, so only give up if nothing has played after 45 s in all.
         started = false; clearTimeout(wd);
         wd = setTimeout(() => {
           if (cur !== c || started) return;
-          try { yt.mute(); yt.playVideo() } catch (e) { }
-          wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 8000);
-        }, 8000);
+          let st = -1; try { st = yt.getPlayerState() } catch (e) { }
+          if (st !== 3) { try { yt.mute(); yt.playVideo() } catch (e) { } } // 3 = buffering (often an ad loading)
+          wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 33000);
+        }, 12000);
         const o = { videoId: c.yt, startSeconds: c.s || 0 }; if (c.e) o.endSeconds = c.e;
         if (yt && yt.loadVideoById) yt.loadVideoById(o);
         else yt = new window.YT.Player("ytPlayer", {
@@ -253,7 +259,11 @@ const media = (() => {
       kind = null; cur = null;
     },
     time() { if (kind === "yt") { try { return Math.max(0, yt.getCurrentTime() - (cur.s || 0)) } catch (e) { return 0 } } return vid.currentTime },
-    dur() { if (kind === "yt") { try { const d = (cur.e || yt.getDuration()) - (cur.s || 0); return d > 0 ? d : NaN } catch (e) { return NaN } } return vid.duration }
+    dur() {
+      // For YouTube, only trust a set end time: while an ad plays, the player reports the ad's length, not the clip's.
+      if (kind === "yt") { if (!cur || !cur.e) return NaN; const d = cur.e - (cur.s || 0); return d > 0 ? d : NaN }
+      return vid.duration
+    }
   };
   return m;
 })();

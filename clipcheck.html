@@ -13,7 +13,10 @@
  .cc button{font:700 17px system-ui,sans-serif;padding:.6em 1.2em;border-radius:999px;border:2px solid #e2ad42;background:#f5c04a;color:#1b1300;cursor:pointer;margin:0 .4em .6em 0}
  .cc button.alt{background:transparent;color:#ffd77a}
  #ccPlayer{width:320px;height:180px;margin:6px 0 12px;background:#000;border-radius:10px;overflow:hidden}
- #ccSum{font-weight:700;margin:.6em 0} #ccList{list-style:none;padding:0;margin:0;font-size:14px}
+ #ccSum{font-weight:700;margin:.6em 0}
+ #ccProb{background:#fff;color:#111;border-radius:14px;padding:14px 18px;margin:10px 0 16px}
+ #ccProb h2{margin:0 0 4px;font:800 22px system-ui,sans-serif;color:#111!important;-webkit-text-fill-color:#111;background:none!important;text-shadow:none!important;filter:none!important} #ccProb .tip{margin:0 0 8px;color:#444}
+ #ccProb ol{margin:0;padding-left:1.6em;font:600 20px/1.5 system-ui,sans-serif} #ccProb .alt{color:#7a5200;border-color:#c9921e;margin-top:10px} #ccList{list-style:none;padding:0;margin:0;font-size:14px}
  #ccList li{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;gap:10px}
  #ccList .ok{color:#7be38b} #ccList .bad{color:#ff8a8a} #ccList .slow{color:#ffd77a} #ccList b{min-width:22px}
  #ccList span.k{flex:1;word-break:break-all;opacity:.9}
@@ -23,10 +26,16 @@
 <body>
 <div class="cc">
  <h1>Check clips</h1>
- <p>This tries every built-in clip here, on this device, with the sound off, and lists the ones YouTube won't play inside the game. Run it on the TV you play on if you can. It takes about 5–10 seconds per clip.</p>
- <button id="ccGo">Check all clips</button><button id="ccCopy" class="alt" disabled>Copy results</button> <a href="./">Back to the game</a>
+ <p>This tries every built-in clip here, on this device, with the sound off, and lists the ones YouTube won't play inside the game. Run it on the TV you play on if you can. Most clips take a few seconds; ones with an ad first take longer.</p>
+ <button id="ccGo">Check all clips</button> <a href="./">Back to the game</a>
  <div id="ccPlayer"><div id="ccYT"></div></div>
  <div id="ccSum">Not started.</div>
+ <div id="ccProb" hidden>
+  <h2>Clips to replace</h2>
+  <p class="tip">Take a photo of this box and send it to Claude, or use Share on a phone.</p>
+  <ol id="ccProbList"></ol>
+  <button id="ccShare" class="alt" hidden>Share</button>
+ </div>
  <ul id="ccList"></ul>
 </div>
 <script>
@@ -48,7 +57,7 @@
   await mk();
   return new Promise(done => {
    let fin = false; const end = r => { if (fin) return; fin = true; clearTimeout(to); cur = null; done(r) };
-   const to = setTimeout(() => end({ s: "slow" }), 12000);
+   const to = setTimeout(() => end({ s: "slow" }), 25000); // allow time for an ad before the clip
    cur = { st: e => { if (e.data === 1) end({ s: "ok", title: (player.getVideoData() || {}).title || "" }) }, err: e => end({ s: "bad", code: e.data }) };
    try { player.mute(); player.loadVideoById(id) } catch (e) { end({ s: "bad", code: "?" }) }
   });
@@ -73,11 +82,16 @@
   try { localStorage.setItem(KEY, JSON.stringify(bad)) } catch (e) { }
   const n = s => res.filter(r => r.s === s).length;
   $("ccSum").textContent = `${n("ok")} play, ${n("bad")} blocked, ${n("slow")} didn't start. Blocked clips are now skipped in games on this device.`;
-  $("ccGo").disabled = false; $("ccCopy").disabled = false;
+  $("ccGo").disabled = false;
+  const probs = report();
+  $("ccProbList").innerHTML = ""; probs.forEach(x => { const li = document.createElement("li"); li.textContent = x; $("ccProbList").appendChild(li) });
+  if (!probs.length) { const li = document.createElement("li"); li.textContent = "None: every clip plays here."; $("ccProbList").appendChild(li) }
+  $("ccProb").hidden = false; $("ccShare").hidden = !navigator.share; $("ccProb").scrollIntoView({ behavior: "smooth" });
  };
- $("ccCopy").onclick = async () => {
-  const txt = res.filter(r => r.s !== "ok").map(r => `${r.k} ${r.id} ${r.s === "bad" ? "error " + r.code : "didn't start"}`).join("\n") || "All clips play.";
-  try { await navigator.clipboard.writeText(txt); $("ccCopy").textContent = "Copied" } catch (e) { prompt("Copy these results:", txt) }
+ const report = () => res.filter(r => r.s !== "ok").map(r => `${r.k} (${r.s === "bad" ? "error " + r.code : "didn't start"})`);
+ $("ccShare").onclick = async () => {
+  const txt = report().join("\n") || "All clips play.";
+  try { await navigator.share({ title: "Clips to replace", text: txt }) } catch (e) { }
  };
 })();
 </script>
