@@ -49,8 +49,10 @@ const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "
 // Clips YouTube refused to play here (removed, or the owner blocks playback on other sites) are skipped for a week.
 const BADKEY = "reelsmart-badclips", BADDAYS = 7;
 let badClips = {}; try { badClips = JSON.parse(localStorage.getItem(BADKEY) || "{}") || {} } catch (e) { }
-const isBad = q => { const at = badClips[ck(q)]; return !!at && Date.now() - at < BADDAYS * 864e5 };
-const markBad = q => { badClips[ck(q)] = Date.now(); try { localStorage.setItem(BADKEY, JSON.stringify(badClips)) } catch (e) { } };
+// Remembered per video, so a replacement clip for the same question isn't skipped.
+const badId = q => { const c = clips[ck(q)] || {}; return ck(q) + "|" + (c.yt || c.u || "") };
+const isBad = q => { const at = badClips[badId(q)]; return !!at && Date.now() - at < BADDAYS * 864e5 };
+const markBad = q => { badClips[badId(q)] = Date.now(); try { localStorage.setItem(BADKEY, JSON.stringify(badClips)) } catch (e) { } };
 function updateCount() {
   const n = Object.keys(clips).length;
   $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");

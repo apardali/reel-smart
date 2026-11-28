@@ -71,7 +71,7 @@
   for (let i = 0; i < items.length; i++) {
    const [k, id] = items[i]; $("ccSum").textContent = `Checking ${i + 1} of ${items.length}…`;
    const r = await tryOne(id); r.k = k; r.id = id; res.push(r);
-   if (r.s === "bad" && [100, 101, 150].includes(r.code)) bad[k] = Date.now(); else if (r.s === "ok") delete bad[k];
+   const bk = k + "|" + id; delete bad[k]; if (r.s === "bad" && [100, 101, 150].includes(r.code)) bad[bk] = Date.now(); else if (r.s === "ok") delete bad[bk];
    const li = document.createElement("li"); li.className = r.s;
    li.innerHTML = `<b>${r.s === "ok" ? "✓" : r.s === "bad" ? "✗" : "…"}</b><span class="k"></span><span></span>`;
    li.children[1].textContent = k + (r.title ? " · " + r.title : "");
