@@ -155,7 +155,8 @@ function mixDeck(list, n) {
   const fr = q => q.f || q.c, out = []; let lastC = null, lastF = null;
   while (out.length < n && groups.size) {
     let cands = [...groups.entries()].filter(([c]) => c !== lastC); if (!cands.length) cands = [...groups.entries()];
-    const w = cands.map(([, a]) => Math.sqrt(a.length)); let r = Math.random() * w.reduce((s, x) => s + x, 0), k = 0;
+    // Clip questions are the heart of the game, so they get six times the weight (roughly 3–4 in 10 questions; never two in a row).
+    const w = cands.map(([c, a]) => Math.sqrt(a.length) * (c === "Clip challenge" ? 6 : 1)); let r = Math.random() * w.reduce((s, x) => s + x, 0), k = 0;
     while (k < w.length - 1 && r > w[k]) { r -= w[k]; k++ }
     const [c, arr] = cands[k]; let j = arr.findIndex(q => fr(q) !== lastF); if (j < 0) j = 0;
     const q = arr.splice(j, 1)[0]; if (!arr.length) groups.delete(c);

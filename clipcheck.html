@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Check clips</title>
+<link rel="stylesheet" href="css/style.css?v=1795800000">
+<style>
+ body{padding:16px}
+ .cc{max-width:900px;margin:0 auto;background:rgba(0,0,0,.55);color:#fff;border-radius:20px;padding:22px;font:16px/1.45 system-ui,sans-serif}
+ .cc h1{font:800 26px/1.2 system-ui,sans-serif;margin:0 0 6px} .cc p{margin:.4em 0 1em;opacity:.9}
+ .cc button{font:700 17px system-ui,sans-serif;padding:.6em 1.2em;border-radius:999px;border:2px solid #e2ad42;background:#f5c04a;color:#1b1300;cursor:pointer;margin:0 .4em .6em 0}
+ .cc button.alt{background:transparent;color:#ffd77a}
+ #ccPlayer{width:320px;height:180px;margin:6px 0 12px;background:#000;border-radius:10px;overflow:hidden}
+ #ccSum{font-weight:700;margin:.6em 0} #ccList{list-style:none;padding:0;margin:0;font-size:14px}
+ #ccList li{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;gap:10px}
+ #ccList .ok{color:#7be38b} #ccList .bad{color:#ff8a8a} #ccList .slow{color:#ffd77a} #ccList b{min-width:22px}
+ #ccList span.k{flex:1;word-break:break-all;opacity:.9}
+ a{color:#ffd77a}
+</style>
+</head>
+<body>
+<div class="cc">
+ <h1>Check clips</h1>
+ <p>This tries every built-in clip here, on this device, with the sound off, and lists the ones YouTube won't play inside the game. Run it on the TV you play on if you can. It takes about 5–10 seconds per clip.</p>
+ <button id="ccGo">Check all clips</button><button id="ccCopy" class="alt" disabled>Copy results</button> <a href="./">Back to the game</a>
+ <div id="ccPlayer"><div id="ccYT"></div></div>
+ <div id="ccSum">Not started.</div>
+ <ul id="ccList"></ul>
+</div>
+<script>
+(() => {
+ const KEY = document.documentElement.dataset.badkey || (location.pathname.includes("reel-meds") ? "reelmeds" : location.pathname.includes("reel-faith") ? "reelfaith" : "reelsmart") + "-badclips";
+ const MEAN = { 2: "bad video ID", 5: "the player couldn't play it", 100: "removed or private", 101: "owner blocks playback on other sites", 150: "owner blocks playback on other sites", 153: "player setup error" };
+ const $ = id => document.getElementById(id);
+ let player = null, res = [];
+ const api = () => new Promise((ok, no) => {
+  if (window.YT && YT.Player) return ok();
+  window.onYouTubeIframeAPIReady = ok; const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.onerror = () => no(new Error("YouTube didn't load")); document.head.appendChild(s);
+ });
+ let cur = null, ready = null;
+ const mk = () => ready || (ready = new Promise(ok => {
+  player = new YT.Player("ccYT", { width: "320", height: "180", playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0 },
+   events: { onReady: () => ok(), onStateChange: e => cur && cur.st(e), onError: e => cur && cur.err(e) } });
+ }));
+ async function tryOne(id) {
+  await mk();
+  return new Promise(done => {
+   let fin = false; const end = r => { if (fin) return; fin = true; clearTimeout(to); cur = null; done(r) };
+   const to = setTimeout(() => end({ s: "slow" }), 12000);
+   cur = { st: e => { if (e.data === 1) end({ s: "ok", title: (player.getVideoData() || {}).title || "" }) }, err: e => end({ s: "bad", code: e.data }) };
+   try { player.mute(); player.loadVideoById(id) } catch (e) { end({ s: "bad", code: "?" }) }
+  });
+ }
+ $("ccGo").onclick = async () => {
+  $("ccGo").disabled = true; $("ccList").innerHTML = ""; res = [];
+  let clips; try { clips = await (await fetch("data/clips.json?t=" + Date.now())).json() } catch (e) { $("ccSum").textContent = "Couldn't read the clip list."; return }
+  try { await api() } catch (e) { $("ccSum").textContent = "YouTube didn't load on this device, so no clips can play here."; $("ccGo").disabled = false; return }
+  const items = Object.entries(clips).map(([k, v]) => { const m = /^yt:([\w-]{11})/.exec(String(v)); return m ? [k, m[1]] : null }).filter(Boolean);
+  let bad = {}; try { bad = JSON.parse(localStorage.getItem(KEY) || "{}") || {} } catch (e) { }
+  for (let i = 0; i < items.length; i++) {
+   const [k, id] = items[i]; $("ccSum").textContent = `Checking ${i + 1} of ${items.length}…`;
+   const r = await tryOne(id); r.k = k; r.id = id; res.push(r);
+   if (r.s === "bad" && [100, 101, 150].includes(r.code)) bad[k] = Date.now(); else if (r.s === "ok") delete bad[k];
+   const li = document.createElement("li"); li.className = r.s;
+   li.innerHTML = `<b>${r.s === "ok" ? "✓" : r.s === "bad" ? "✗" : "…"}</b><span class="k"></span><span></span>`;
+   li.children[1].textContent = k + (r.title ? " · " + r.title : "");
+   li.children[2].textContent = r.s === "ok" ? "plays" : r.s === "bad" ? `error ${r.code}: ${MEAN[r.code] || "unknown"}` : "didn't start";
+   $("ccList").appendChild(li);
+  }
+  try { player.stopVideo() } catch (e) { }
+  try { localStorage.setItem(KEY, JSON.stringify(bad)) } catch (e) { }
+  const n = s => res.filter(r => r.s === s).length;
+  $("ccSum").textContent = `${n("ok")} play, ${n("bad")} blocked, ${n("slow")} didn't start. Blocked clips are now skipped in games on this device.`;
+  $("ccGo").disabled = false; $("ccCopy").disabled = false;
+ };
+ $("ccCopy").onclick = async () => {
+  const txt = res.filter(r => r.s !== "ok").map(r => `${r.k} ${r.id} ${r.s === "bad" ? "error " + r.code : "didn't start"}`).join("\n") || "All clips play.";
+  try { await navigator.clipboard.writeText(txt); $("ccCopy").textContent = "Copied" } catch (e) { prompt("Copy these results:", txt) }
+ };
+})();
+</script>
+</body>
+</html>

@@ -44,3 +44,6 @@ To attach a clip to an existing built-in question, upload it to `clips/` and add
 
 ## Local testing
 Serve the folder with any static server (e.g. `npx serve .`). To test phones without the internet, run a local PeerJS server (`npx peerjs --port 9000`) and add `?peerhost=127.0.0.1&peerport=9000&peersecure=0` to the URL.
+
+## Checking clips
+YouTube lets some videos play only on YouTube itself. When the game hits one of those, it shows the error on the TV, swaps in a different question, and skips that clip for a week. To find every blocked clip at once, open **Admin → Check clips** (`clipcheck.html`), ideally on the TV you play on. It tries each clip with the sound off and lists the ones that play, are blocked (error 101/150) or don't start. Blocked clips are then skipped in games on that device. **Copy results** gives you a list of clips to replace in `data/clips.json`.
