@@ -222,7 +222,7 @@ const media = (() => {
   function ytState(e) {
     if (stale(e)) return;
     const S = window.YT.PlayerState;
-    if (e.data === S.PLAYING) { started = true; clearTimeout(wd); hint.classList.add("hide") }
+    if (e.data === S.PLAYING) { started = true; clearTimeout(wd); hint.classList.add("hide"); try { if (yt.isMuted()) yt.unMute(); yt.setVolume(100) } catch (er) { } } // clips always play with sound
     if (e.data === S.PLAYING) { m.onPlaying(); if (!poll) poll = setInterval(() => m.onTime(), 250) }
     else if (e.data === S.PAUSED) { stopPoll(); m.onPause() }
     else if (e.data === S.ENDED) {
@@ -241,13 +241,13 @@ const media = (() => {
         kind = "yt"; vid.classList.add("hide"); box.classList.remove("hide");
         try { await loadApi() } catch (e) { if (cur === c) this.onError("api"); return }
         if (cur !== c) return;
-        // If the clip hasn't started after 6 s, ask for a tap on the video: YouTube often holds an ad (or the clip)
-        // until someone taps it. Also try playing it muted. Only give up after about 80 s with nothing playing.
+        // If the clip hasn't started after 4 s, ask for a tap on the video: YouTube often holds an ad (or the clip)
+        // until someone taps it. Clips are never muted. Only give up after about 80 s with nothing playing.
         started = false; clearTimeout(wd);
         wd = setTimeout(() => {
           if (cur !== c || started) return;
           let st = -1; try { st = yt.getPlayerState() } catch (e) { }
-          if (st !== 3) { try { yt.mute(); yt.playVideo() } catch (e) { } } // 3 = buffering (often an ad loading)
+          if (st !== 3) { try { yt.playVideo() } catch (e) { } } // 3 = buffering (often an ad loading); never muted
           hint.innerHTML = `<b>▶ ${esc(t("Tap the video to start the clip"))}</b><span>${esc(t("YouTube may play an ad first. Tap Skip when it appears."))}</span>`;
           hint.classList.remove("hide");
           wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 75000);
