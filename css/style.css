@@ -700,3 +700,6 @@ body,button,input,textarea{font-family:Roboto,"DM Sans",system-ui,sans-serif}
  #setup #lvlPick .pill{min-height:calc(var(--u)*5.4);font-size:calc(var(--u)*2.4);border-radius:999px}
  #setup #catPick .pill.pill-wide{min-height:calc(var(--u)*7);font-size:calc(var(--u)*3)}
 }
+
+/* "That clip wouldn't play" note on the TV */
+#play .clipnote{margin:0 0 .6em;padding:.45em .9em;border-radius:12px;background:rgba(0,0,0,.35);color:#ffd77a;font-weight:600;text-align:center}

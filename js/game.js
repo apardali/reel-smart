@@ -46,6 +46,11 @@ function parseClip(v) {
 }
 // YouTube's player shows the video title, which gives away "Which movie is this?", so those need a file.
 const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "Name that scene") };
+// Clips YouTube refused to play here (removed, or the owner blocks playback on other sites) are skipped for a week.
+const BADKEY = "reelsmart-badclips", BADDAYS = 7;
+let badClips = {}; try { badClips = JSON.parse(localStorage.getItem(BADKEY) || "{}") || {} } catch (e) { }
+const isBad = q => { const at = badClips[ck(q)]; return !!at && Date.now() - at < BADDAYS * 864e5 };
+const markBad = q => { badClips[ck(q)] = Date.now(); try { localStorage.setItem(BADKEY, JSON.stringify(badClips)) } catch (e) { } };
 function updateCount() {
   const n = Object.keys(clips).length;
   $("clipCount").textContent = !clipsReady ? t("Loading clips…") : n ? (n > 1 ? t("{n} clips ready", { n }) : t("1 clip ready")) : t("No clips yet. See Admin for how to add them.");
@@ -119,7 +124,7 @@ function applyMode() {
 }
 function buildDeck(n) {
   const needsClip = q => q.hard || q.c === "Name that scene";
-  const ok = q => !needsClip(q) || hasClip(q);
+  const ok = q => !needsClip(q) || (hasClip(q) && !isBad(q));
   const pool = Q.filter(q => ok(q) && (cat === "all" || q.t === cat));
   if (lvl === "mix") return mixDeck(pool, n);
   // Chosen level first; if it runs short, top up from the next level over, then the far one.
@@ -130,6 +135,14 @@ function buildDeck(n) {
     deck = deck.concat(mixDeck(pool.filter(q => Math.abs(lv(q) - L) === d), n - deck.length));
   }
   return deck;
+}
+// A stand-in for a clip question whose clip won't play: same category filter, no clip needed, not already in the game.
+function standIn(old) {
+  const used = new Set(deck.map(q => q.id));
+  const fits = q => !(q.hard || q.c === "Name that scene") && !used.has(q.id) && (cat === "all" || q.t === cat);
+  const near = Q.filter(q => fits(q) && (q.lv || 2) === (old.lv || 2));
+  const list = near.length ? near : Q.filter(fits);
+  return list.length ? mixDeck(list, 1)[0] : null;
 }
 function mixDeck(list, n) {
   if (n <= 0) return [];
@@ -157,6 +170,7 @@ let autoQ = null, clipQ = null;
 let deck = [], idx = 0, timer = null, left = 0, locked = false, answering = false;
 function paintQuestion(q, label, turnText, tiles) {
   T = BASE_T;
+  const cn = $("clipNote"); if (cn && cn._q !== q) cn.classList.add("hide");
   $("qnum").textContent = label; $("pts").textContent = "";
   $("turn").textContent = turnText; $("cat").textContent = t(q.c); $("qtext").textContent = t(q.q);
   $("opts").innerHTML = q.o.map((o, i) => `<button class="opt${tiles ? " tile L" + i : ""}" data-i="${i}" ${tiles ? 'tabindex="-1"' : ""}><b>${tiles ? LET[i] : i + 1}</b><span>${esc(t(o))}</span></button>`).join("");
@@ -191,8 +205,12 @@ const media = (() => {
     setTimeout(() => rej(new Error("YouTube player timed out")), 15000);
   }));
   const stopPoll = () => { clearInterval(poll); poll = null };
+  let started = false, wd = null;
+  const stale = e => { if (!cur || kind !== "yt") return true; try { const v = e.target.getVideoData().video_id; return !!v && v !== cur.yt } catch (er) { return false } };
   function ytState(e) {
+    if (stale(e)) return;
     const S = window.YT.PlayerState;
+    if (e.data === S.PLAYING) { started = true; clearTimeout(wd) }
     if (e.data === S.PLAYING) { m.onPlaying(); if (!poll) poll = setInterval(() => m.onTime(), 250) }
     else if (e.data === S.PAUSED) { stopPoll(); m.onPause() }
     else if (e.data === S.ENDED) { stopPoll(); m.onPause(); if (kind === "yt") m.onEnded() }
@@ -201,16 +219,25 @@ const media = (() => {
     onPlaying() { }, onPause() { }, onEnded() { }, onError() { }, onTime() { },
     async load(c) {
       this.stop(); cur = c;
+      try { if (yt && yt.unMute) yt.unMute() } catch (e) { }
       if (c.yt) {
         kind = "yt"; vid.classList.add("hide"); box.classList.remove("hide");
-        try { await loadApi() } catch (e) { if (cur === c) this.onError(); return }
+        try { await loadApi() } catch (e) { if (cur === c) this.onError("api"); return }
         if (cur !== c) return;
+        // If the clip hasn't started after 8 s (often a TV browser blocking autoplay with sound), try it muted;
+        // if it still hasn't started 8 s later, give up on it.
+        started = false; clearTimeout(wd);
+        wd = setTimeout(() => {
+          if (cur !== c || started) return;
+          try { yt.mute(); yt.playVideo() } catch (e) { }
+          wd = setTimeout(() => { if (cur === c && !started) m.onError("timeout") }, 8000);
+        }, 8000);
         const o = { videoId: c.yt, startSeconds: c.s || 0 }; if (c.e) o.endSeconds = c.e;
         if (yt && yt.loadVideoById) yt.loadVideoById(o);
         else yt = new window.YT.Player("ytPlayer", {
           width: "100%", height: "100%", videoId: c.yt,
           playerVars: Object.assign({ start: Math.floor(c.s || 0), autoplay: 1, playsinline: 1, rel: 0 }, c.e ? { end: Math.ceil(c.e) } : {}),
-          events: { onReady: e => { if (cur) e.target.playVideo() }, onStateChange: ytState, onError: () => { if (kind === "yt") m.onError() } }
+          events: { onReady: e => { if (cur) e.target.playVideo() }, onStateChange: ytState, onError: e => { if (kind === "yt" && cur) m.onError(e.data) } }
         });
       } else {
         kind = "file"; box.classList.add("hide"); vid.classList.remove("hide");
@@ -219,7 +246,7 @@ const media = (() => {
     },
     pause() { if (kind === "yt") { try { yt.pauseVideo() } catch (e) { } } else vid.pause() },
     stop() {
-      stopPoll();
+      stopPoll(); clearTimeout(wd); started = false;
       if (kind === "yt") { try { yt.stopVideo() } catch (e) { } m.onPause() }
       else if (kind === "file" || vid.getAttribute("src")) { vid.pause(); if (vid.getAttribute("src")) { vid.removeAttribute("src"); vid.load() } }
       kind = null; cur = null;
@@ -239,7 +266,20 @@ media.onTime = () => {
 media.onPlaying = () => music.duck(true);
 media.onPause = () => music.duck(false);
 media.onEnded = () => { if (!$("play").classList.contains("hide")) beginAnswers() };
-media.onError = () => { if (!$("play").classList.contains("hide") && clipQ && deck[idx] === clipQ && !answering) { $("result").textContent = t("That clip wouldn't play, so here's the question without it."); $("screen").classList.add("hide"); media.stop(); beginAnswers() } };
+media.onError = code => {
+  if ($("play").classList.contains("hide") || !clipQ || deck[idx] !== clipQ || answering) return;
+  const q = clipQ; clipQ = null; media.stop();
+  // 100 = removed, 101/150 = the owner doesn't allow playback on other websites: remember and skip it next time.
+  if (code === 100 || code === 101 || code === 150) markBad(q);
+  const why = typeof code === "number" ? t("YouTube error {n}", { n: code }) : code === "timeout" ? t("it didn't start") : t("YouTube didn't load");
+  const sub = standIn(q);
+  if (sub) { deck[idx] = sub; clipNote(sub, t("That clip wouldn't play ({why}), so here's a different question.", { why })); if (mode === "host") hostAsk(); else ask(); return }
+  $("result").textContent = t("That clip wouldn't play ({why}), so here's the question without it.", { why }); $("screen").classList.add("hide"); beginAnswers();
+};
+function clipNote(q, msg) {
+  let n = $("clipNote"); if (!n) { n = document.createElement("p"); n.id = "clipNote"; n.className = "note clipnote"; $("play").prepend(n) }
+  n._q = q; n.textContent = msg; n.classList.remove("hide"); clearTimeout(n._t); n._t = setTimeout(() => n.classList.add("hide"), 7000);
+}
 vid.addEventListener("timeupdate", () => media.onTime());
 vid.addEventListener("playing", () => media.onPlaying());
 ["pause", "ended", "emptied"].forEach(e => vid.addEventListener(e, () => media.onPause()));
