@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Trim clips</title>
+<style>
+ :root{color-scheme:dark}
+ body{margin:0;padding:14px;background:#0b0f1e;color:#fff;font:16px/1.45 system-ui,sans-serif}
+ .wrap{max-width:980px;margin:0 auto}
+ h1{font:800 26px/1.2 system-ui,sans-serif;margin:0 0 4px} p{margin:.3em 0 .9em;opacity:.9}
+ a{color:#ffd77a}
+ button{font:700 16px system-ui,sans-serif;padding:.55em 1em;border-radius:999px;border:2px solid #e2ad42;background:#f5c04a;color:#1b1300;cursor:pointer;margin:0 .35em .45em 0}
+ button.alt{background:transparent;color:#ffd77a} button:disabled{opacity:.45}
+ .grid{display:grid;grid-template-columns:1fr;gap:14px} @media(min-width:900px){.grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}}
+ .card{background:rgba(255,255,255,.06);border-radius:16px;padding:14px}
+ #pl{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden} #pl iframe,#pl>div{width:100%;height:100%;border:0}
+ .now{font:700 20px system-ui,sans-serif;margin:8px 0} .win{font:700 18px system-ui,sans-serif;color:#ffd77a}
+ .qs{margin:.4em 0 .6em;padding-left:1.2em} .qs li{margin:.2em 0}
+ #list{list-style:none;margin:0;padding:0;max-height:70vh;overflow:auto} #list li{padding:8px 10px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+ #list li:hover,#list li.on{background:rgba(245,192,74,.18)} #list .k{flex:1;word-break:break-all} #list .st{font-size:13px;opacity:.85;white-space:nowrap}
+ .done{color:#7be38b} .todo{color:#ffd77a}
+ textarea{width:100%;min-height:120px;background:#000;color:#fff;border-radius:10px;border:1px solid #444;font:13px/1.4 ui-monospace,monospace;padding:8px;box-sizing:border-box}
+ .warn{color:#ff9b9b;font-weight:700} .warn.ok{color:#7be38b}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <h1>Trim clips</h1>
+ <p>Each clip plays for at most 60 seconds. Pick a clip, play it, and tap <b>Start here</b> just before the moment its question asks about. The clip then plays from there for up to 60 seconds; tap <b>End here</b> to stop it sooner. Trims work straight away in games on this device. When you're done, tap <b>Send my trims</b> so they can be saved for everyone. <a href="./">Back to the game</a></p>
+ <div class="grid">
+  <div class="card">
+   <div id="pl"><div id="yt"></div></div>
+   <div class="now" id="now">Pick a clip from the list.</div>
+   <div class="win" id="win"></div>
+   <ol class="qs" id="qs"></ol>
+   <div>
+    <button id="back5" class="alt" disabled>−5 s</button><button id="fwd5" class="alt" disabled>+5 s</button>
+    <button id="setS" disabled>Start here</button><button id="setE" disabled>End here</button>
+   </div>
+   <div><button id="prev" class="alt" disabled>Play the trimmed clip</button><button id="save" disabled>Save trim</button><button id="reset" class="alt" disabled>Reset</button></div>
+   <div class="warn" id="msg"></div>
+  </div>
+  <div class="card">
+   <div><b id="count"></b></div>
+   <ul id="list"></ul>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px">
+  <button id="send">Send my trims</button>
+  <p>On a phone this opens the share menu, so you can send the list in a message. Otherwise copy the text below and paste it to Claude.</p>
+  <textarea id="out" readonly></textarea>
+ </div>
+</div>
+<script type="module">
+const PREFIX = location.pathname.includes("reel-meds") ? "reelmeds" : location.pathname.includes("reel-faith") ? "reelfaith" : "reelsmart";
+const KEY = PREFIX + "-trims", MAX = 60;
+const $ = id => document.getElementById(id);
+let clips = {}, qsBy = {}, trims = {}, cur = null, player = null, ready = null, sel = { s: 0, e: 0 }, watch = null;
+try { trims = JSON.parse(localStorage.getItem(KEY) || "{}") || {} } catch (e) { }
+const fmt = x => { x = Math.max(0, Math.round(x)); return Math.floor(x / 60) + ":" + String(x % 60).padStart(2, "0") };
+const parse = v => { const m = /^yt:([\w-]{11})(?:@(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?)?$/.exec(String(v)); return m ? { yt: m[1], s: +(m[2] || 0), e: m[3] ? +m[3] : 0 } : null };
+const saveAll = () => { try { localStorage.setItem(KEY, JSON.stringify(trims)) } catch (e) { } renderList(); renderOut() };
+function renderOut() {
+  const lines = Object.entries(trims).filter(([k, v]) => clips[k] && clips[k].yt === v.yt).map(([k, v]) => `"${k}": "yt:${v.yt}@${v.s}-${v.e}"`);
+  $("out").value = lines.length ? lines.join(",\n") : "(no trims yet)";
+}
+function renderList() {
+  const keys = Object.keys(clips);
+  const n = keys.filter(k => trims[k] && trims[k].yt === clips[k].yt).length;
+  $("count").textContent = `${n} of ${keys.length} clips trimmed`;
+  $("list").innerHTML = "";
+  for (const k of keys) {
+    const c = clips[k], t = trims[k] && trims[k].yt === c.yt ? trims[k] : null;
+    const li = document.createElement("li"); if (cur === k) li.className = "on";
+    li.innerHTML = '<span class="k"></span><span class="st"></span>';
+    li.children[0].textContent = k;
+    li.children[1].textContent = t ? `✓ ${fmt(t.s)}–${fmt(t.e)}` : c.e ? `set ${fmt(c.s)}–${fmt(c.e)}` : "first 60 s";
+    li.children[1].className = "st " + (t || c.e ? "done" : "todo");
+    li.onclick = () => pick(k); $("list").appendChild(li);
+  }
+}
+const api = () => new Promise(ok => { if (window.YT && YT.Player) return ok(); window.onYouTubeIframeAPIReady = ok; const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(s) });
+const mk = () => ready || (ready = api().then(() => new Promise(ok => { player = new YT.Player("yt", { width: "100%", height: "100%", playerVars: { playsinline: 1, rel: 0 }, events: { onReady: () => ok() } }) })));
+function showWin() { $("win").textContent = `Plays ${fmt(sel.s)} to ${fmt(sel.e)} (${Math.round(sel.e - sel.s)} s)` }
+async function pick(k) {
+  cur = k; const c = clips[k], t = trims[k] && trims[k].yt === c.yt ? trims[k] : null;
+  sel = t ? { s: t.s, e: t.e } : { s: c.s || 0, e: c.e && c.e - (c.s || 0) <= MAX ? c.e : (c.s || 0) + MAX };
+  $("now").textContent = k; showWin(); $("msg").textContent = ""; $("msg").className = "warn";
+  $("qs").innerHTML = ""; for (const q of (qsBy[k] || [])) { const li = document.createElement("li"); li.textContent = q; $("qs").appendChild(li) }
+  ["back5", "fwd5", "setS", "setE", "prev", "save", "reset"].forEach(id => $(id).disabled = false);
+  renderList(); await mk(); clearInterval(watch); player.cueVideoById({ videoId: c.yt, startSeconds: sel.s });
+}
+const now = () => { try { return player.getCurrentTime() } catch (e) { return 0 } };
+$("back5").onclick = () => player.seekTo(Math.max(0, now() - 5), true);
+$("fwd5").onclick = () => player.seekTo(now() + 5, true);
+$("setS").onclick = () => { const s = Math.floor(now()); sel.s = s; if (sel.e <= s || sel.e - s > MAX) sel.e = s + MAX; showWin(); $("msg").textContent = "" };
+$("setE").onclick = () => { const e = Math.ceil(now()); if (e <= sel.s) { $("msg").textContent = "The end has to be after the start." ; return } sel.e = Math.min(e, sel.s + MAX); showWin(); $("msg").textContent = e > sel.s + MAX ? "Clips can be at most 60 seconds, so the end was moved to 60 s after the start." : "" };
+$("prev").onclick = () => { clearInterval(watch); player.loadVideoById({ videoId: clips[cur].yt, startSeconds: sel.s, endSeconds: sel.e }) };
+$("save").onclick = () => { trims[cur] = { yt: clips[cur].yt, s: sel.s, e: sel.e }; saveAll(); $("msg").textContent = "Saved. Games on this device now use this trim."; $("msg").className = "warn ok" };
+$("reset").onclick = () => { delete trims[cur]; saveAll(); pick(cur) };
+$("send").onclick = async () => {
+  const txt = `Trims for ${PREFIX}:\n` + $("out").value;
+  if (navigator.share) { try { await navigator.share({ title: "Clip trims", text: txt }); return } catch (e) { } }
+  try { await navigator.clipboard.writeText(txt); $("send").textContent = "Copied" } catch (e) { $("out").select() }
+};
+(async () => {
+  const cm = await fetch("data/clips.json", { cache: "no-cache" }).then(r => r.json()).catch(() => ({}));
+  for (const [k, v] of Object.entries(cm)) { const c = parse(v); if (c) clips[k] = c }
+  try { const { Q } = await import("./js/questions.js"); for (const q of Q) if (q.clip && clips[q.clip]) (qsBy[q.clip] = qsBy[q.clip] || []).push(q.q) } catch (e) { }
+  renderList(); renderOut();
+})();
+</script>
+</body>
+</html>

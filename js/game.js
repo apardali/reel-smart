@@ -42,8 +42,15 @@ const ck = q => q.clip || q.id;
 function parseClip(v) {
   if (typeof v !== "string" || !v) return null;
   const m = v.match(/^yt:([\w-]{11})(?:@(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?)?$/);
-  return m ? { yt: m[1], s: +(m[2] || 0), e: m[3] ? +m[3] : 0 } : { u: v };
+  if (!m) return { u: v };
+  // Every YouTube clip plays for at most MAXCLIP seconds from its start.
+  const s = +(m[2] || 0), e = m[3] ? +m[3] : 0;
+  return { yt: m[1], s, e: e > s && e - s <= MAXCLIP ? e : s + MAXCLIP };
 }
+const MAXCLIP = 60;
+// Clip windows set on this device with the Trim clips page (trim.html), until they're saved into data/clips.json.
+const TRIMKEY = "reelsmart-trims";
+function applyTrims() { let tr = {}; try { tr = JSON.parse(localStorage.getItem(TRIMKEY) || "{}") || {} } catch (e) { } for (const [k, v] of Object.entries(tr)) { const c = clips[k]; if (c && c.yt && v && v.yt === c.yt) clips[k] = parseClip(`yt:${c.yt}@${v.s}-${v.e}`) } }
 // YouTube's player shows the video title, which gives away "Which movie is this?", so those need a file.
 const hasClip = q => { const c = clips[ck(q)]; return !!c && !(c.yt && q.c === "Name that scene") };
 // Clips YouTube refused to play here (removed, or the owner blocks playback on other sites) are skipped for a week.
@@ -78,7 +85,7 @@ const getJSON = u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.json() :
   const [cm, cu] = await Promise.all([getJSON("data/clips.json"), getJSON("data/custom.json")]);
   if (cm && typeof cm === "object") for (const [k, v] of Object.entries(cm)) { const c = parseClip(v); if (c) clips[k] = c }
   if (Array.isArray(cu)) CUSTOM = cu;
-  rebuildQ(); clipsReady = true; updateCount();
+  rebuildQ(); applyTrims(); clipsReady = true; updateCount();
 })();
 
 /* ---------- peer-to-peer link (PeerJS) ---------- */
@@ -221,7 +228,7 @@ const media = (() => {
     else if (e.data === S.ENDED) {
       // An ad finishing can look like the clip ending; only count it when the clip itself has played.
       let t = 0; try { t = e.target.getCurrentTime() } catch (er) { }
-      if (!cur.e && t < 3) return;
+      if (t < (cur.s || 0) + 3) return;
       stopPoll(); m.onPause(); if (kind === "yt") m.onEnded()
     }
   }
